@@ -1,5 +1,5 @@
 # Compukit-Uk101-Emulator
-Emulator For a Compukit Uk101
+Emulator Compukit Uk101
 
 ![Screenshot](imagefiles/image1.jpg)
 ![Screenshot](imagefiles/image3.jpg)
