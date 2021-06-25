@@ -1,5 +1,5 @@
 # Compukit-Uk101-Emulator
-Emulator Compukit Uk101
+Emulator 6502 and Hardware for a Compukit Uk101
 
 ![Screenshot](imagefiles/image1.jpg)
 ![Screenshot](imagefiles/image3.jpg)
