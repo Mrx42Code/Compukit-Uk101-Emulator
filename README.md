@@ -8,3 +8,5 @@ Emulator For a Compukit Uk101
 ![Screenshot](imagefiles/image2.jpg)
 
 source code and library to follow soon.
+
+fullname:"Mrx42Code"
