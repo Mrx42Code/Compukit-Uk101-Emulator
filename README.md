@@ -1,4 +1,4 @@
-# Compukit-Uk101-Emulator
+# Compukit Uk101 Emulator (6502)
 Emulator 6502 and Hardware for a Compukit Uk101 with screen resolution sizes of 48x16 or 48x32 or 48x48 with source code and library
 
 ![Screenshot](imagefiles/image1.jpg)
