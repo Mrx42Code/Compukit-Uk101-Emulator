@@ -7,4 +7,4 @@ Emulator 6502 and Hardware for a Compukit Uk101 with screen resolution sizes of 
 ![Screenshot](imagefiles/image5.jpg)
 ![Screenshot](imagefiles/image2a.jpg)
 
-source code and library to follow soon.
+with source code and library.
