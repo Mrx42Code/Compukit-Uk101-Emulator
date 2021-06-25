@@ -16,4 +16,4 @@ Kits of parts for building the machine were available from CompShop Ltd of 14 St
 
 In 1979 i got my Kit form the CompShop in Barnet (14 Station Road) and spent all night building the kit and had many hours of fun.
 
-With the Coronavirus lockdown I brush up my programming skills and here we are with a Compukit Uk101 Emulator
+With the Coronavirus lockdown I brush up my programming skills and here we are with Compukit Uk101 Emulator
