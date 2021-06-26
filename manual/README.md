@@ -1,1 +1,1 @@
-# Compukit Uk101 Emulator (Manuals.)
+# Compukit Uk101 Emulator (Manuals)
