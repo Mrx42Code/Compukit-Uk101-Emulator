@@ -26,21 +26,11 @@
 //-----------------------------------------------------------------------------
 // File: MC_Hardware6502.cpp: implementation of the MC_Hardware6502 class.
 //-----------------------------------------------------------------------------
+#include "framework.h"
 #include "MC_Hardware6502.h"
 #include "MC_VideoDisplay.h"
 #include "MC_Processor6502.h"
 #include "MC_Disassembler6502.h"
-
-#include <stdio.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <limits.h>
-#include <errno.h>
-#include <chrono>
 
 using namespace std;
 
@@ -272,7 +262,7 @@ void MC_Hardware6502::CpuInitializeAndReset()
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::CpuCegmonukRomMod()
 {
-#if(cegmonukRomMod) // cegmonuk Res Mod and save Rom
+#if(cegmonukRomMod)                                                                 // cegmonuk Res Mod and save Rom
     MemoryLoad(MemoryMonitorRomAddress, MemoryMonitorRomSizeAddress, "MonitorRom/cegmonuk.rom");
     #if HardWareHiResScreen
         m_MemoryWriteOverride = true;
@@ -530,7 +520,7 @@ uint8_t MC_Hardware6502::CpuEmuKeyboard(uint16_t address, bool RW)
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::CpuLoadRoms()
 {
-    MemoryLoad(MemoryExtRomAddress, MemoryExtRomSizeAddress, "GoodRoms/ExtMonitor.rom");                                                // Ext_Rom
+    MemoryLoad(MemoryExtRomAddress, MemoryExtRomSizeAddress, "GoodRoms/ExtMonitor.rom");                                                // Ext Rom
     //MemoryLoad(MemoryDiskRomAddress, MemoryDiskRomAddress, "GoodRoms/Disk.rom");                                                      // Disk Rom
     MemoryLoad(MemoryBasicRomAddress, MemoryBasicRomSizeAddress, "GoodRoms/BASIC-UK101-8k.rom");                                        // Basic Rom
 #if F000OrF800_Rom

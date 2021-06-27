@@ -26,12 +26,8 @@
 //-----------------------------------------------------------------------------
 // File: MC_VideoDisplay.cpp: implementation of the MC_VideoDisplay class.
 //-----------------------------------------------------------------------------
+#include "framework.h"
 #include "MC_VideoDisplay.h"
-
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <errno.h>
 
 using namespace std;
 

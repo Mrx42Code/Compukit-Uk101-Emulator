@@ -24,7 +24,7 @@
  **********************************************************************************/
 
 //-----------------------------------------------------------------------------
-// header.h : include file for standard system include files, or project specific include files
+// framework.h : include file for standard system include files, or project specific include files
 //-----------------------------------------------------------------------------
 
 #pragma once
@@ -36,7 +36,21 @@
 #include <windows.h>
 
 // C RunTime Header Files
+#include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <ctype.h>
+#include <string.h>
+#include <string>
 #include <malloc.h>
 #include <memory.h>
 #include <tchar.h>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <limits.h>
+#include <errno.h>
+#include <chrono>
+#include <thread>
+#include <commdlg.h>

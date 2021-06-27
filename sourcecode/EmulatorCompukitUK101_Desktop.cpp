@@ -30,8 +30,6 @@
 #include "EmulatorCompukitUK101_Desktop.h"
 #include "MC_Hardware6502.h"
 
-#include <iostream>
-
 using namespace std;
 
 //*****************************************************************************  

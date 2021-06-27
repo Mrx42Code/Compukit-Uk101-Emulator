@@ -33,14 +33,8 @@
 //-----------------------------------------------------------------------------
 // File: MC_Disassembler6502.cpp: implementation of the MC_Disassembler6502 class.
 //-----------------------------------------------------------------------------
+#include "framework.h"
 #include "MC_Disassembler6502.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-#include <ctype.h>
-#include <errno.h>
 
 using namespace std;
 
@@ -263,10 +257,10 @@ int MC_Disassembler6502::DisassemblerFile(int argc, char* argv[])
 {
     uint16_t byte_count = 0;
     char tmpstr[512];
-    uint8_t* buffer; /* Memory buffer */
-    FILE* input_file; /* Input file */
-    uint16_t pc; /* Program counter */
-    options_s options; /* Command-line options parsing results */
+    uint8_t* buffer;                                                            /* Memory buffer */
+    FILE* input_file;                                                           /* Input file */
+    uint16_t pc;                                                                /* Program counter */
+    options_s options;                                                          /* Command-line options parsing results */
     int result = 0;
 
     ParseArgs(argc, argv, &options);
@@ -582,14 +576,14 @@ void MC_Disassembler6502::Disassemble(char *output, uint8_t *buffer, options_s*o
 //-----------------------------------------------------------------------------
 void MC_Disassembler6502::Version()
 {
-    fprintf(stderr, "MC_Disassembler6502 %s (C)2021\n", VERSION_INFO);
+    fprintf(stderr, "DCC6502 %s (C)2021\n", VERSION_INFO);
 }
 //-Protected-------------------------------------------------------------------
 // Name: Usage()
 //-----------------------------------------------------------------------------
 void MC_Disassembler6502::Usage()
 {
-    fprintf(stderr, "\nUsage: MC_Disassembler6502 [options] FILENAME\n");
+    fprintf(stderr, "\nUsage: DCC6502 [options] FILENAME\n");
     fprintf(stderr, "  -?/-h        : Show this help message\n");
     fprintf(stderr, "  -o ORIGIN    : Set the origin (base address of disassembly) [default: 0x8000]\n");
     fprintf(stderr, "  -m NUM_BYTES : Only disassemble the first NUM_BYTES bytes\n");

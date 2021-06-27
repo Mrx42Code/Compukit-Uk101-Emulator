@@ -28,7 +28,7 @@
 // Desc: Application interface for the MC_VideoDisplay class.
 //-----------------------------------------------------------------------------
 #ifndef MC_VideoDisplay_H
-#define MC_VideoDisplay_H
+    #define MC_VideoDisplay_H
 
 #pragma once
 
