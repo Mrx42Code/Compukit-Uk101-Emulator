@@ -38,6 +38,9 @@ using namespace std;
 // Public Code
 //*****************************************************************************
 #define SHOW(T,V) do { T x = V; PrintBits(#T, #V, (unsigned char*) &x, sizeof(x)); } while(0)
+
+const char StatusBits[8] = { 'C', 'Z' , 'I' , 'D', 'B', '.', 'O', 'N'};
+
 //-----------------------------------------------------------------------------
 // IMPLEMENT_DYNCREATE
 //-----------------------------------------------------------------------------
@@ -844,7 +847,8 @@ void MC_Hardware6502::PrintHexDump(const char* desc, void* addr, long len)
 void MC_Hardware6502::PrintByteAsBits(char val)
 {
     for (int i = 7; 0 <= i; i--) {
-        printf("%c", (val & (1 << i)) ? '1' : '0');
+        printf("%c", (val & (1 << i)) ? StatusBits[i] : '.');
+//      printf("%c", (val & (1 << i)) ? '1' : '0');
     }
 }
 //-Protected-------------------------------------------------------------------
