@@ -35,9 +35,11 @@
 //-----------------------------------------------------------------------------
 // Const
 //-----------------------------------------------------------------------------
-#define cegmonukRomMod						false                                // cegmonuk Res Mod and save Rom
+#define BasicSelectUk101OrOsi				false                               // Basic Select Comuukit uk101 or Osi
 
-#define F000OrF800_Rom						false                                // Big Monitor Rom And Move Uart Address
+#define cegmonukRomMod						false                               // cegmonuk Res Mod and save Rom
+
+#define F000OrF800_Rom						false                               // Big Monitor Rom And Move Uart Address
 
 #define HardWareHiResScreen				    false                               // Screen Size 48x48
 #define HardWareMedResScreen			    false                               // Screen Size 48x32
@@ -222,6 +224,7 @@ class MC_Hardware6502
 {
 
 	public:
+        bool                m_BasicSelectUk101OrOsi;
         bool                m_Disassembler6502;
         bool                m_Cpu6502Run;
         uint8_t             m_MemoryMap[MemoryMapSizeAddress];

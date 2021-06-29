@@ -79,6 +79,7 @@ MC_Hardware6502::MC_Hardware6502()
 {
     m_Cpu6502Run = false;
     m_Disassembler6502 = false;
+    m_BasicSelectUk101OrOsi = BasicSelectUk101OrOsi;
     m_App_Hwnd = nullptr;
     CpuMemoryInit();
     mc_ThreadMain.Running = false;
@@ -525,7 +526,11 @@ void MC_Hardware6502::CpuLoadRoms()
 {
     MemoryLoad(MemoryExtRomAddress, MemoryExtRomSizeAddress, "GoodRoms/ExtMonitor.rom");                                                // Ext Rom
     //MemoryLoad(MemoryDiskRomAddress, MemoryDiskRomAddress, "GoodRoms/Disk.rom");                                                      // Disk Rom
-    MemoryLoad(MemoryBasicRomAddress, MemoryBasicRomSizeAddress, "GoodRoms/BASIC-UK101-8k.rom");                                        // Basic Rom
+    if (m_BasicSelectUk101OrOsi) {
+        MemoryLoad(MemoryBasicRomAddress, MemoryBasicRomSizeAddress, "GoodRoms/BASIC-OSI-8k.rom");                                      // Basic Osi Rom
+    } else {
+        MemoryLoad(MemoryBasicRomAddress, MemoryBasicRomSizeAddress, "GoodRoms/BASIC-UK101-8k.rom");                                    // Basic CompuKit Rom
+    }
 #if F000OrF800_Rom
     #if HardWareHiResScreen
         MemoryLoad(MemoryMonitorRomAddress, MemoryMonitorRomSizeAddress, "GoodRoms/WEMonUK101_48x48.rom");                             // Monitor Rom WEMonUK101 48x48

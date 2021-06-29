@@ -120,33 +120,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     int wmId;
-    HMENU hmenu;
     uint8_t KbChar;
-    static bool Disassembler6502 = false;
-    static bool Cpu6502Run = true;
 
-    if (Disassembler6502 != mc_Hardware6502.m_Disassembler6502) {
-        Disassembler6502 = mc_Hardware6502.m_Disassembler6502;
-        hmenu = GetMenu(hWnd);
-        if (Disassembler6502) {
-            CheckMenuItem(hmenu, IDM_DEBUG_CPUDEBUGON, MF_CHECKED);
-            CheckMenuItem(hmenu, IDM_DEBUG_CPUDEBUGOFF, MF_UNCHECKED);
-        } else {
-            CheckMenuItem(hmenu, IDM_DEBUG_CPUDEBUGON, MF_UNCHECKED);
-            CheckMenuItem(hmenu, IDM_DEBUG_CPUDEBUGOFF, MF_CHECKED);
-        }
-    }
-    if (Cpu6502Run != mc_Hardware6502.m_Cpu6502Run) {
-        Cpu6502Run = mc_Hardware6502.m_Cpu6502Run;
-        hmenu = GetMenu(hWnd);
-        if (Cpu6502Run) {
-            CheckMenuItem(hmenu, IDM_DEBUG_CPURUN, MF_CHECKED);
-            CheckMenuItem(hmenu, IDM_DEBUG_CPUSTOP, MF_UNCHECKED);
-        } else {
-            CheckMenuItem(hmenu, IDM_DEBUG_CPURUN, MF_UNCHECKED);
-            CheckMenuItem(hmenu, IDM_DEBUG_CPUSTOP, MF_CHECKED);
-        }
-    }
+    DoCMenuTick(hWnd);
     switch (message) {
         case WM_COMMAND: {
                 wmId = LOWORD(wParam);
@@ -182,6 +158,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         mc_Hardware6502.CpuReset();
                         break;
                     case IDM_RESET_INITIALIZEANDRESETCPU:
+                        mc_Hardware6502.CpuInitializeAndReset();
+                        break;
+                    case IDM_ROMS_BASICCOMPUKITUK101:
+                        mc_Hardware6502.m_BasicSelectUk101OrOsi = false;
+                        mc_Hardware6502.CpuInitializeAndReset();
+                        break;
+                    case IDM_ROMS_BASICOSI600:
+                        mc_Hardware6502.m_BasicSelectUk101OrOsi = true;
                         mc_Hardware6502.CpuInitializeAndReset();
                         break;
                     default:
@@ -229,6 +213,47 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
             break;
     }
     return (INT_PTR)FALSE;
+}
+void DoCMenuTick(HWND hWnd)
+{
+    HMENU hmenu = nullptr;
+    static bool Disassembler6502 = false;
+    static bool Cpu6502Run = true;
+    static bool BasicSelect = false;
+
+    if (Disassembler6502 != mc_Hardware6502.m_Disassembler6502) {
+        Disassembler6502 = mc_Hardware6502.m_Disassembler6502;
+        hmenu = GetMenu(hWnd);
+        if (Disassembler6502) {
+            CheckMenuItem(hmenu, IDM_DEBUG_CPUDEBUGON, MF_CHECKED);
+            CheckMenuItem(hmenu, IDM_DEBUG_CPUDEBUGOFF, MF_UNCHECKED);
+        } else {
+            CheckMenuItem(hmenu, IDM_DEBUG_CPUDEBUGON, MF_UNCHECKED);
+            CheckMenuItem(hmenu, IDM_DEBUG_CPUDEBUGOFF, MF_CHECKED);
+        }
+    }
+    if (Cpu6502Run != mc_Hardware6502.m_Cpu6502Run) {
+        Cpu6502Run = mc_Hardware6502.m_Cpu6502Run;
+        hmenu = GetMenu(hWnd);
+        if (Cpu6502Run) {
+            CheckMenuItem(hmenu, IDM_DEBUG_CPURUN, MF_CHECKED);
+            CheckMenuItem(hmenu, IDM_DEBUG_CPUSTOP, MF_UNCHECKED);
+        } else {
+            CheckMenuItem(hmenu, IDM_DEBUG_CPURUN, MF_UNCHECKED);
+            CheckMenuItem(hmenu, IDM_DEBUG_CPUSTOP, MF_CHECKED);
+        }
+    }
+    if (BasicSelect != mc_Hardware6502.m_BasicSelectUk101OrOsi) {
+        BasicSelect = mc_Hardware6502.m_BasicSelectUk101OrOsi;
+        hmenu = GetMenu(hWnd);
+        if (BasicSelect) {
+            CheckMenuItem(hmenu, IDM_ROMS_BASICOSI600, MF_CHECKED);
+            CheckMenuItem(hmenu, IDM_ROMS_BASICCOMPUKITUK101, MF_UNCHECKED);
+        } else {
+            CheckMenuItem(hmenu, IDM_ROMS_BASICOSI600, MF_UNCHECKED);
+            CheckMenuItem(hmenu, IDM_ROMS_BASICCOMPUKITUK101, MF_CHECKED);
+        }
+    }
 }
 //-Public----------------------------------------------------------------------
 // Name:  AddConsole()
