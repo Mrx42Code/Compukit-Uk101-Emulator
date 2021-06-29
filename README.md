@@ -16,4 +16,4 @@ The UK101 design was published in Practical Electronics, a popular hobbyists mag
 Kits of parts for building the machine were available from CompShop Ltd of 14 Station Road, Barnet, Hertfordshire. It is thought that around 5000 kits were produced.
 
 In 1979 i got my Kit form the CompShop in Barnet (14 Station Road) and spent all night building the kit and had many hours of fun.
-![Screenshot](imagefiles/hardware.jpg)
+![Screenshot](imagefiles/hardware.jpg) 
