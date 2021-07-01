@@ -11,6 +11,7 @@ With the Coronavirus lockdown I brush up my programming skills and here we are w
 ![Screenshot](imagefiles/image8.jpg)
 ![Screenshot](imagefiles/image5.jpg)
 ![Screenshot](imagefiles/image2.jpg)
+![Screenshot](imagefiles/image10.jpg)
 
 # History
 The UK101 design was published in Practical Electronics, a popular hobbyists magazine at the time. The August, September, October and November 1979 issues carried the four parts of the article, authored by Dr A. A. Berk. Later issues of the magazine contained information on modifications and additions to the machine, including a series of articles on building an expansion unit.
