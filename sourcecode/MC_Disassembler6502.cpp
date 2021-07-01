@@ -433,10 +433,10 @@ void MC_Disassembler6502::Disassemble(char *output, uint8_t *buffer, options_s*o
         sprintf(opcode_repr, ".byte $%02X", opcode);
         if (options->hex_output) {
             sprintf(hex_dump, "$%04X  %02X ", current_addr, opcode);
-            sprintf(output, "%-16s%-16s; INVALID OPCODE !!!", hex_dump, opcode_repr);
+            sprintf(output, "%-16s%-16s  INVALID OPCODE", hex_dump, opcode_repr);
         } else {
             sprintf(hex_dump, "$%04X", current_addr);
-            sprintf(output, "%-8s%-16s; INVALID OPCODE !!!", hex_dump, opcode_repr);
+            sprintf(output, "%-8s%-16s  INVALID OPCODE", hex_dump, opcode_repr);
         }
         return;
     }

@@ -73,6 +73,7 @@ MC_Processor6502::MC_Processor6502(BusRead r, BusWrite w)
 	// fill jump table with ILLEGALs
 	instr.addr = &MC_Processor6502::Addr_IMP;
 	instr.code = &MC_Processor6502::Op_ILLEGAL;
+	instr.cycles = 0;
 	for (int i = 0; i < 256; i++) {
 		m_InstrTable[i] = instr;
 	}
@@ -805,13 +806,13 @@ bool MC_Processor6502::RunOneOp()
 	Instr instr;
 
 	if (!m_registers.IllegalOpcode) {
+		m_DebugInstr.pc = m_registers.pc;
 		opcode = Read(m_registers.pc++);										// fetch
-		instr = m_InstrTable[opcode];											// decode
-		m_DebugInstr.pc = m_registers.pc - 1;
 		m_DebugInstr.opcode = opcode;
-		m_CrashDump.DebugInstr[m_CrashDump.Index] = m_DebugInstr;
+		instr = m_InstrTable[opcode];											// decode
 		m_TotalCyclesPerSec += instr.cycles;
 		Exec(instr);															// execute
+		m_CrashDump.DebugInstr[m_CrashDump.Index] = m_DebugInstr;
 		m_CrashDump.Registers[m_CrashDump.Index] = m_registers;
 		m_CrashDump.Index++;
 		if (m_CrashDump.Index >= CrashDumpSize) {

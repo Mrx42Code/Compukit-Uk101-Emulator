@@ -165,14 +165,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         break;
                     case IDM_RESET_INITIALIZEANDRESETCPU:
                         mc_Hardware6502.CpuInitializeAndReset();
+                        system("cls");
                         break;
                     case IDM_ROMS_BASICCOMPUKITUK101:
                         mc_Hardware6502.m_BasicSelectUk101OrOsi = false;
                         mc_Hardware6502.CpuInitializeAndReset();
+                        system("cls");
                         break;
                     case IDM_ROMS_BASICOSI600:
                         mc_Hardware6502.m_BasicSelectUk101OrOsi = true;
                         mc_Hardware6502.CpuInitializeAndReset();
+                        system("cls");
                         break;
                     case IDM_CPUSPEED1:
                         mc_Hardware6502.m_CpuSettings.Speed = 1;
@@ -347,9 +350,13 @@ void UpdateMenus(HWND hWnd)
 //-----------------------------------------------------------------------------
 void AddConsole()
 {
+    HANDLE hConsole = nullptr;
+
     if (AllocConsole() == 0) {
         return;                                                                 // Handle error here. Use ::GetLastError() to get the error.
     }
+    hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
     // Redirect CRT standard input, output and error handles to the console window.
     FILE* pNewStdout = nullptr;
     FILE* pNewStderr = nullptr;
@@ -383,6 +390,7 @@ void UpdateConsoleTitle()
         }
     }
 }
+
 
 
 

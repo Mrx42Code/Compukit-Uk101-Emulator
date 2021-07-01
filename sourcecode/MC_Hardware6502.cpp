@@ -150,6 +150,7 @@ void MC_Hardware6502::KeyboardMapKey(uint8_t& KeyPress)
     uint8_t Keycp;
     char Text[2];
     Text[1] = 0;
+    bool KeyFound = false;
 
     if (KeyPress) {
         for (i = 0; i < len; i++) {
@@ -170,12 +171,16 @@ void MC_Hardware6502::KeyboardMapKey(uint8_t& KeyPress)
                     m_MemoryKeyScan.CpuCount = 0;
                     m_MemoryKeyScan.KeysDone = false;
                     m_MemoryKeyScan.CpuRow = 0xFF;
+                    KeyFound = true;
                     Text[0] = Keycp;
                     //printf("Text(%s) RowCol(%d,%d) LShift(%d) RShift(%d) Caplock(%d) Ctrl(%d) RowScanCode(%02X) ColScanCode(%02X)\r\n", Text, m_MemoryKeyScan.Row, m_MemoryKeyScan.Col, m_MemoryKeyScan.LShift, m_MemoryKeyScan.RShift, m_MemoryKeyScan.caplock, m_MemoryKeyScan.ctrl, m_MemoryKeyScan.RowScanCode, m_MemoryKeyScan.ColScanCode);
                 } else {
                     //printf("KeyPress(%02X)\r\n", KeyPress);
                 }
             }
+        }
+        if (KeyPress != m_MemoryKeyScan.Keyin) {
+            //printf("KeyPress(%02X)\r\n", KeyPress);
         }
     }
 }
@@ -189,6 +194,8 @@ uint8_t MC_Hardware6502::CpuMemoryMapRead(uint16_t address)
     } else  if (address >= MemoryExtRomAddress && address <= MemoryExtRomEndAddress) {
         return m_MemoryMap[address];
     } else  if (address >= MemoryParPortAddress && address <= MemoryParPortEndAddress) {
+        return m_MemoryMap[address];
+    } else  if (address >= MemoryBasic5RomAddress && address <= MemoryBasic5RomEndAddress) {
         return m_MemoryMap[address];
     } else  if (address >= MemoryDiskRomAddress && address <= MemoryDiskRomEndAddress) {
         return m_MemoryMap[address];
@@ -221,6 +228,8 @@ void MC_Hardware6502::CpuMemoryMapWrite(uint16_t address, uint8_t value)
         m_MemoryMap[address] = value;
     } else  if (address >= MemoryParPortAddress && address <= MemoryParPortEndAddress && (MemoryParPortRWAddress || m_MemoryWriteOverride)) {
         m_MemoryMap[address] = value;
+    } else  if (address >= MemoryBasic5RomAddress && address <= MemoryBasic5RomEndAddress && (MemoryBasic5RomRWAddress || m_MemoryWriteOverride)) {
+        m_MemoryMap[address] = value;
     } else  if (address >= MemoryDiskRomAddress && address <= MemoryDiskRomEndAddress && (MemoryDiskRomRWAddress || m_MemoryWriteOverride)) {
         m_MemoryMap[address] = value;
     } else  if (address >= MemoryBasicRomAddress && address <= MemoryBasicRomEndAddress && (MemoryBasicRomRWAddress || m_MemoryWriteOverride)) {
@@ -250,7 +259,7 @@ void MC_Hardware6502::CpuCalCyclesPerSec()
     if (m_Cpu6502Run && !m_Disassembler6502) {
         m_CpuSettings.AvrSpeed = (m_CpuSettings.AvrSpeed * 0.9) + (m_CpuSettings.CyclesPerSec * 0.1);
         m_CpuSettings.AvrBigSpeed = (m_CpuSettings.AvrBigSpeed * 0.9) + (m_CpuSettings.AvrSpeed * 0.1);
-        if (CpuSpeed) {
+        if (m_CpuSettings.Speed) {
             if (m_CpuSettings.AvrSpeed > CpuSpeed) {
                 m_CpuSettings.SpeedUpDn += (20.0f / (float)(m_CpuSettings.CyclesPerSec / 100000.0));
             }
@@ -261,6 +270,7 @@ void MC_Hardware6502::CpuCalCyclesPerSec()
             m_CpuSettings.SpeedUpDn = 0;
         }
     }
+    //printf("m_CpuSettings.Speed = %d m_CpuSettings.SpeedUpDn = %.3f\r\n", m_CpuSettings.Speed, m_CpuSettings.SpeedUpDn);
     //printf("CyclesPerSec %.3f mhz AvrSpeed %.3f mhz SpeedUpDn %d\r\n", CyclesPerSec / 100000.0, m_CpuSettings.AvrSpeed / 100000.0, m_CpuSettings.SpeedUpDn);
 }
 //-Public----------------------------------------------------------------------
@@ -357,7 +367,7 @@ void MC_Hardware6502::CpuCegmonukRomMod()
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::CpuMemoryMapDump()
 {
-    PrintHexDump("Memory Dump", &m_MemoryMap, sizeof(m_MemoryMap));
+    PrintHexDump16Bit("Memory Dump", &m_MemoryMap, sizeof(m_MemoryMap));
     if (m_Uart6850.Input.Index > 0) {
         PrintHexDump("Load Buffer Dump", &m_Uart6850.Input.Buffer, m_Uart6850.Input.Index);
     }
@@ -455,7 +465,6 @@ uint8_t MC_Hardware6502::CpuEmu6850UartRead(uint16_t address)
 {
     static uint16_t RxDelayTick = 0;
     static uint16_t TxDelayTick = 0;
-
     switch (address) {
         case CTRL_6850ADDR: {
             RxDelayTick++;
@@ -463,7 +472,7 @@ uint8_t MC_Hardware6502::CpuEmu6850UartRead(uint16_t address)
             uint8_t flags = 0;
             if (m_Uart6850.Input.ProcessedIndex < m_Uart6850.Input.Index) {
                 if (m_Uart6850.Registers_SR.bits.RDRF) {
-                    if (RxDelayTick > 1250) {
+                    if (RxDelayTick > 10) {
                         RxDelayTick = 0;
                         m_Uart6850.Registers_SR.bits.RDRF = 0;
                     }
@@ -471,7 +480,7 @@ uint8_t MC_Hardware6502::CpuEmu6850UartRead(uint16_t address)
                 }
             } 
             if (m_Uart6850.Registers_SR.bits.TDRE) {
-                if (TxDelayTick > 250) {
+                if (TxDelayTick > 10) {
                     TxDelayTick = 0;
                     m_Uart6850.Registers_SR.bits.TDRE = 0;
                  }
@@ -490,7 +499,7 @@ uint8_t MC_Hardware6502::CpuEmu6850UartRead(uint16_t address)
         }
         default:
             break;
-        }
+    }
     return 0xff;
 }
 //-Protected-------------------------------------------------------------------
@@ -567,6 +576,15 @@ uint8_t MC_Hardware6502::CpuEmuKeyboard(uint16_t address, bool RW)
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::CpuLoadRoms()
 {
+
+#if Basic5Test
+    MemoryLoad(0x9000, 0x0800, "GoodRoms/Roms/Basic5ROM");
+    MemoryLoad(0x9800, 0x0800, "GoodRoms/Roms/BasicXROM");
+    MemoryLoad(0xA000, 0x0800, "GoodRoms/Roms/Basic1ROM");
+    MemoryLoad(0xA800, 0x0800, "GoodRoms/Roms/Basic2ROM");
+    MemoryLoad(0xB000, 0x0800, "GoodRoms/Roms/Basic3ROM");
+    MemoryLoad(0xB800, 0x0800, "GoodRoms/Roms/PremierBasic4ROM");
+#else
     MemoryLoad(MemoryExtRomAddress, MemoryExtRomSizeAddress, "GoodRoms/ExtMonitor.rom");                                                // Ext Rom
     //MemoryLoad(MemoryDiskRomAddress, MemoryDiskRomAddress, "GoodRoms/Disk.rom");                                                      // Disk Rom
     if (m_BasicSelectUk101OrOsi) {
@@ -574,6 +592,8 @@ void MC_Hardware6502::CpuLoadRoms()
     } else {
         MemoryLoad(MemoryBasicRomAddress, MemoryBasicRomSizeAddress, "GoodRoms/BASIC-UK101-8k.rom");                                    // Basic CompuKit Rom
     }
+#endif
+
 #if F000OrF800_Rom
     #if HardWareHiResScreen
         MemoryLoad(MemoryMonitorRomAddress, MemoryMonitorRomSizeAddress, "GoodRoms/WEMonUK101_48x48.rom");                             // Monitor Rom WEMonUK101 48x48
@@ -890,6 +910,59 @@ void MC_Hardware6502::PrintHexDump(const char* desc, void* addr, long len)
     printf("--------  ------------------------------------------------\r\n");
 }
 //-Protected-------------------------------------------------------------------
+// Name: PrintHexDump16Bit(const char* desc, void* addr, long len)
+//-----------------------------------------------------------------------------
+void MC_Hardware6502::PrintHexDump16Bit(const char* desc, void* addr, long len)
+{
+    long i;
+    uint8_t* pc = (uint8_t*)addr;
+    char buff[20];
+    uint8_t Data;
+
+    if (desc != NULL) {
+        printf("\n%s:\r\n", desc);
+    }
+    if (len == 0) {
+        printf("\nZERO LENGTH\r\n");
+        return;
+    } else if (len < 0) {
+        printf("\nNEGATIVE LENGTH: %ld\r\n", len);
+        return;
+    }
+    printf("Addr:  00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F\r\n");
+    printf("-----  ------------------------------------------------\r\n");
+    for (i = 0; i < len; i++) {
+        if ((i % 16) == 0) {
+            if (i != 0) {
+                printf("  | %s |\r\n", buff);
+            }
+            printf("$%04lX ", i);
+        }
+        Data = pc[i];
+        if ((i % 16) == 8)
+            printf("  %02X", Data);
+        else
+            printf(" %02X", Data);
+
+        if ((Data < 0x20) || (Data > 0x7e))
+            buff[i % 16] = '.';
+        else
+            buff[i % 16] = Data;
+
+        buff[(i % 16) + 1] = '\0';
+    }
+    while ((i % 16) != 0) {
+        if ((i % 16) == 8)
+            printf("    ");
+        else
+            printf("   ");
+
+        i++;
+    }
+    printf("  | %s |\r\n", buff);
+    printf("-----  ------------------------------------------------\r\n");
+}
+//-Protected-------------------------------------------------------------------
 // Name: :PrintByteAsBits(char val)
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::PrintByteAsBits(char val)
@@ -932,13 +1005,13 @@ void MC_Hardware6502::DebugCrashInfo()
     char tmpstr[512];
     Registers6502 Registers;
 
-    PrintHexDump("Memory Dump $0000-$03FF", &m_MemoryMap, 1024);
+    PrintHexDump16Bit("Crash Memory Dump $0000-$03FF", &m_MemoryMap, 1024);
     index = mc_Processor6502.m_CrashDump.Index;
     index++;
     if (index >= CrashDumpSize) {
         index = 0;
     }
-    printf("\r\nDebug Crash Info\r\n");
+    printf("\r\nCrash Debug Info\r\n");
     printf("----------------------------------------------------------\r\n");
     while (index != mc_Processor6502.m_CrashDump.Index) {
         Registers = mc_Processor6502.m_CrashDump.Registers[index];

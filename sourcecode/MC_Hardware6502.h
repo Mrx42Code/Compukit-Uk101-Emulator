@@ -39,6 +39,8 @@
 
 #define BasicSelectUk101OrOsi				false                               // Basic Select Comuukit uk101 or Osi
 
+#define Basic5Test						    false                               // Basic 5 Test
+
 #define cegmonukRomMod						false                               // cegmonuk Res Mod and save Rom
 
 #define F000OrF800_Rom						false                               // Big Monitor Rom And Move Uart Address
@@ -57,7 +59,7 @@
 #define MemoryRamRWAddress					true								// R/W    
 
 #define MemoryExtRomAddress					0x8000								// 8000 - 87FF Ext Rom
-#define MemoryExtRomSizeAddress				0x0800								// 4k
+#define MemoryExtRomSizeAddress				0x0800								// 2k
 #define MemoryExtRomEndAddress				(MemoryExtRomAddress + MemoryExtRomSizeAddress) - 1
 #define MemoryExtRomRWAddress				false								// R
 
@@ -66,8 +68,13 @@
 #define MemoryParPortEndAddress				(MemoryParPortAddress + MemoryParPortSizeAddress) - 1
 #define MemoryParPortRWAddress				true								// R/W
 
-#define MemoryDiskRomAddress				0x9800								// 9800 - 9FFF Disk Rom
-#define MemoryDiskRomSizeAddress			0x0004								// 4k
+#define MemoryBasic5RomAddress				0x9000								// 9000 - 97FF Basic5 Rom
+#define MemoryBasic5RomSizeAddress			0x0800								// 2k
+#define MemoryBasic5RomEndAddress			(MemoryBasic5RomAddress + MemoryBasic5RomSizeAddress) - 1
+#define MemoryBasic5RomRWAddress			false								// R/W
+
+#define MemoryDiskRomAddress				0x9800								// 9800 - 9FFF Disk Rom / BasicX Rom
+#define MemoryDiskRomSizeAddress			0x0800								// 2k
 #define MemoryDiskRomEndAddress				(MemoryDiskRomAddress + MemoryDiskRomSizeAddress) - 1
 #define MemoryDiskRomRWAddress				false								// R/W
 
@@ -150,14 +157,16 @@ static const uint8_t m_KeyboardCodeTable[] = {
 
         'S', 3, 7, 0, 0, 1, 0,  'D', 3, 6, 0, 0, 1, 0,  'F', 3, 5, 0, 0, 1, 0,  'G', 3, 4, 0, 0, 1, 0,  'H', 3, 3, 0, 0, 1, 0,  'J', 3, 2, 0, 0, 1, 0,  'K', 3, 1, 0, 0, 1, 0,
         's', 3, 7, 0, 0, 0, 0,  'd', 3, 6, 0, 0, 0, 0,  'f', 3, 5, 0, 0, 0, 0,  'g', 3, 4, 0, 0, 0, 0,  'h', 3, 3, 0, 0, 0, 0,  'j', 3, 2, 0, 0, 0, 0,  'k', 3, 1, 0, 0, 0, 0,
-        0x0F, 3, 2, 0, 0, 0, 1, '[', 3, 1, 1, 0, 1, 0,
+        0x0A, 3, 2, 0, 0, 1, 1, '[', 3, 1, 1, 0, 1, 0,
 
         'X', 2, 7, 0, 0, 1, 0,  'C', 2, 6, 0, 0, 1, 0,  'V', 2, 5, 0, 0, 1, 0,  'B', 2, 4, 0, 0, 1, 0,  'N', 2, 3, 0, 0, 1, 0,  'M', 2, 2, 0, 0, 1, 0,  ',', 2, 1, 0, 0, 0, 0,
         'x', 2, 7, 0, 0, 0, 0,  'c', 2, 6, 0, 0, 0, 0,  'v', 2, 5, 0, 0, 0, 0,  'b', 2, 4, 0, 0, 0, 0,  'n', 2, 3, 0, 0, 0, 0,  'm', 2, 2, 0, 0, 0, 0,  
         0x03, 2, 6, 0, 0, 0, 1, ']', 2, 2, 1, 0, 1, 0,  '<', 2, 1, 0, 1, 0, 0,
 
         'Q', 1, 7, 0, 0, 1, 0,  'A', 1, 6, 0, 0, 1, 0,  'Z', 1, 5, 0, 0, 1, 0,  ' ', 1, 4, 0, 0, 0, 0,  '/', 1, 3, 0, 0, 0, 0,  ';', 1, 2, 0, 0, 0, 0,  'P', 1, 1, 0, 0, 1, 0,
-        'q', 1, 7, 0, 0, 0, 0,  'a', 1, 6, 0, 0, 0, 0,  'z', 1, 5, 0, 0, 0, 0,  'p', 1, 1, 0, 0, 0, 0,  '?', 1, 3, 0, 1, 0, 0,  '+', 1, 2, 0, 1, 0, 0,  '@', 1, 1, 1, 0, 1, 0
+        'q', 1, 7, 0, 0, 0, 0,  'a', 1, 6, 0, 0, 0, 0,  'z', 1, 5, 0, 0, 0, 0,  'p', 1, 1, 0, 0, 0, 0,  '?', 1, 3, 0, 1, 0, 0,  '+', 1, 2, 0, 1, 0, 0,  '@', 1, 1, 1, 0, 1, 0,
+
+        0x7B, 0, 1, 1, 0, 0, 0,  0x7D, 0, 2, 1, 0, 0, 0
 };
 
 //-----------------------------------------------------------------------------
@@ -220,7 +229,7 @@ typedef struct ThreadType
 
 typedef struct CpuSpeedSettings
 {
-    uint16_t                Speed;
+    uint8_t                 Speed;
     float                   SpeedUpDn;
     double                  AvrSpeed;
     double                  AvrBigSpeed;
@@ -291,6 +300,7 @@ class MC_Hardware6502
         void                SaveUartData(std::string FileName);
         uint16_t            Hex2Dec(std::string s);
         void                PrintHexDump(const char* desc, void* addr, long len);
+        void                PrintHexDump16Bit(const char* desc, void* addr, long len);
         void                PrintByteAsBits(char val);
         void                PrintBits(const char* ty, const char* val, unsigned char* bytes, size_t num_bytes);
         void                DebugInfo();
