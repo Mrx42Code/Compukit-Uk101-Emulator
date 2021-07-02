@@ -207,6 +207,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_PAINT: {
                 PAINTSTRUCT ps;
                 HDC hdc = BeginPaint(hWnd, &ps);
+                mc_Hardware6502.ReSizeDisplay();
                 EndPaint(hWnd, &ps);
             }
             break;
