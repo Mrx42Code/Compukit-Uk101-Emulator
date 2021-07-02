@@ -35,7 +35,7 @@
 //-----------------------------------------------------------------------------
 // Const
 //-----------------------------------------------------------------------------
-#define CPU6502_SPEED				        3200                                // Cpu 6502 Speed 2 mhz on this pc
+#define CPU6502_SPEED				        1750.0f                             // Cpu 6502 Speed 2 mhz on this pc
 
 #define BasicSelectUk101OrOsi				false                               // Basic Select Comuukit uk101 or Osi
 
@@ -45,9 +45,9 @@
 
 #define F000OrF800_Rom						false                               // Big Monitor Rom And Move Uart Address
 
-#define HardWareHiResScreen				    false                               // Screen Size 48x48
+#define HardWareHiResScreen				    true                               // Screen Size 48x48
 #define HardWareMedResScreen			    false                               // Screen Size 48x32
-#define HardWareLoResScreen			        true                                // Screen Size 48x16
+#define HardWareLoResScreen			        false                                // Screen Size 48x16
 
 #define MemoryMapAddress					0x0000								// 0000-FFFF Ram - Cpu Memory Map
 #define MemoryMapSizeAddress				0x10000								// 64k

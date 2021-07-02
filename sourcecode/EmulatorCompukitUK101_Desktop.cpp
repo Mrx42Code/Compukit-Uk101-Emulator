@@ -137,6 +137,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         KillTimer(hWnd, IDT_TIMERCyclesPerSec);
                         KillTimer(hWnd, IDT_TIMERIrq);
                         KillTimer(hWnd, IDT_TIMERNmi);
+                        mc_Hardware6502.Destroy();
                         DestroyWindow(hWnd);
                         break;
                     case IDM_FILE_LOAD:
@@ -214,6 +215,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
             break;
         case WM_DESTROY:
+            KillTimer(hWnd, IDT_TIMERCyclesPerSec);
+            KillTimer(hWnd, IDT_TIMERIrq);
+            KillTimer(hWnd, IDT_TIMERNmi);
             mc_Hardware6502.Destroy();
             PostQuitMessage(0);
             break;
@@ -265,15 +269,15 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 void UpdateMenus(HWND hWnd)
 {
     HMENU hmenu = nullptr;
-    static bool Disassembler6502 = false;
-    static bool Cpu6502Run = true;
-    static bool BasicSelect = false;
-    static uint16_t CpuSpeed = 0;
+    static bool s_Disassembler6502 = false;
+    static bool s_Cpu6502Run = true;
+    static bool s_BasicSelect = false;
+    static uint16_t s_CpuSpeed = 0;
 
-    if (Disassembler6502 != mc_Hardware6502.m_Disassembler6502) {
-        Disassembler6502 = mc_Hardware6502.m_Disassembler6502;
+    if (s_Disassembler6502 != mc_Hardware6502.m_Disassembler6502) {
+        s_Disassembler6502 = mc_Hardware6502.m_Disassembler6502;
         hmenu = GetMenu(hWnd);
-        if (Disassembler6502) {
+        if (s_Disassembler6502) {
             CheckMenuItem(hmenu, IDM_DEBUG_CPUDEBUGON, MF_CHECKED);
             CheckMenuItem(hmenu, IDM_DEBUG_CPUDEBUGOFF, MF_UNCHECKED);
         } else {
@@ -281,10 +285,10 @@ void UpdateMenus(HWND hWnd)
             CheckMenuItem(hmenu, IDM_DEBUG_CPUDEBUGOFF, MF_CHECKED);
         }
     }
-    if (Cpu6502Run != mc_Hardware6502.m_Cpu6502Run) {
-        Cpu6502Run = mc_Hardware6502.m_Cpu6502Run;
+    if (s_Cpu6502Run != mc_Hardware6502.m_Cpu6502Run) {
+        s_Cpu6502Run = mc_Hardware6502.m_Cpu6502Run;
         hmenu = GetMenu(hWnd);
-        if (Cpu6502Run) {
+        if (s_Cpu6502Run) {
             CheckMenuItem(hmenu, IDM_DEBUG_CPURUN, MF_CHECKED);
             CheckMenuItem(hmenu, IDM_DEBUG_CPUSTOP, MF_UNCHECKED);
         } else {
@@ -292,10 +296,10 @@ void UpdateMenus(HWND hWnd)
             CheckMenuItem(hmenu, IDM_DEBUG_CPUSTOP, MF_CHECKED);
         }
     }
-    if (BasicSelect != mc_Hardware6502.m_BasicSelectUk101OrOsi) {
-        BasicSelect = mc_Hardware6502.m_BasicSelectUk101OrOsi;
+    if (s_BasicSelect != mc_Hardware6502.m_BasicSelectUk101OrOsi) {
+        s_BasicSelect = mc_Hardware6502.m_BasicSelectUk101OrOsi;
         hmenu = GetMenu(hWnd);
-        if (BasicSelect) {
+        if (s_BasicSelect) {
             CheckMenuItem(hmenu, IDM_ROMS_BASICOSI600, MF_CHECKED);
             CheckMenuItem(hmenu, IDM_ROMS_BASICCOMPUKITUK101, MF_UNCHECKED);
         } else {
@@ -303,8 +307,8 @@ void UpdateMenus(HWND hWnd)
             CheckMenuItem(hmenu, IDM_ROMS_BASICCOMPUKITUK101, MF_CHECKED);
         }
     }
-    if (CpuSpeed != mc_Hardware6502.m_CpuSettings.Speed) {
-        CpuSpeed = mc_Hardware6502.m_CpuSettings.Speed;
+    if (s_CpuSpeed != mc_Hardware6502.m_CpuSettings.Speed) {
+        s_CpuSpeed = mc_Hardware6502.m_CpuSettings.Speed;
         hmenu = GetMenu(hWnd);
         CheckMenuItem(hmenu, IDM_CPUSPEED1, MF_UNCHECKED);
         CheckMenuItem(hmenu, IDM_CPUSPEED2, MF_UNCHECKED);
@@ -313,7 +317,7 @@ void UpdateMenus(HWND hWnd)
         CheckMenuItem(hmenu, IDM_CPUSPEED16, MF_UNCHECKED);
         CheckMenuItem(hmenu, IDM_CPUSPEED32, MF_UNCHECKED);
         CheckMenuItem(hmenu, IDM_CPUSPEEDMAX, MF_UNCHECKED);
-        switch (CpuSpeed) {
+        switch (s_CpuSpeed) {
             case 1: {
                 CheckMenuItem(hmenu, IDM_CPUSPEED1, MF_CHECKED);
             }
@@ -377,16 +381,22 @@ void AddConsole()
 void UpdateConsoleTitle()
 {
     TCHAR szNewTitle[MAX_PATH];
+    static uint8_t s_OnceASec = 10;
 
-    if (mc_Hardware6502.m_Disassembler6502 && mc_Hardware6502.m_Cpu6502Run) {
-        StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Compukit UK101 Emulator (6502@%.3f Mhz)"), mc_Hardware6502.m_CpuSettings.CyclesPerSec / 100000);
-        if (!SetConsoleTitle(szNewTitle)) {
-            _tprintf(TEXT("SetConsoleTitle failed (%d)\n"), GetLastError());
+    s_OnceASec++;
+    if (s_OnceASec > 10) {
+        s_OnceASec = 0;
+        if (mc_Hardware6502.m_Disassembler6502 && mc_Hardware6502.m_Cpu6502Run) {
+            StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Compukit UK101 Emulator (6502@%.3f Mhz)"), mc_Hardware6502.m_CpuSettings.CyclesPerSec / 100000);
+            if (!SetConsoleTitle(szNewTitle)) {
+                _tprintf(TEXT("SetConsoleTitle failed (%d)\n"), GetLastError());
+            }
         }
-    } else if (mc_Hardware6502.m_Cpu6502Run) {
-        StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Compukit UK101 Emulator (6502@%.3f Mhz)"), mc_Hardware6502.m_CpuSettings.AvrBigSpeed / 100000);
-        if (!SetConsoleTitle(szNewTitle)) {
-            _tprintf(TEXT("SetConsoleTitle failed (%d)\n"), GetLastError());
+        else if (mc_Hardware6502.m_Cpu6502Run) {
+            StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Compukit UK101 Emulator (6502@%.3f Mhz)"), mc_Hardware6502.m_CpuSettings.AvrBigSpeed / 100000);
+            if (!SetConsoleTitle(szNewTitle)) {
+                _tprintf(TEXT("SetConsoleTitle failed (%d)\n"), GetLastError());
+            }
         }
     }
 }

@@ -767,7 +767,7 @@ void MC_Processor6502::NMI()
 	StackPush(m_registers.pc & 0xFF);
 	StackPush(m_registers.status);
 	SET_INTERRUPT(1);
-	m_registers.pc = (MemoryRead(nmiVectorH) << 8) + MemoryRead(nmiVectorL);
+	m_registers.pc = (MemoryRead(s_nmiVectorH) << 8) + MemoryRead(s_nmiVectorL);
 	return;
 }
 //-Public----------------------------------------------------------------------
@@ -781,7 +781,7 @@ void MC_Processor6502::IRQ()
 		StackPush(m_registers.pc & 0xFF);
 		StackPush(m_registers.status);
 		SET_INTERRUPT(1);
-		m_registers.pc = (MemoryRead(irqVectorH) << 8) + MemoryRead(irqVectorL);
+		m_registers.pc = (MemoryRead(s_irqVectorH) << 8) + MemoryRead(s_irqVectorL);
 	}
 	return;
 }
@@ -793,7 +793,7 @@ void MC_Processor6502::Reset()
 	m_registers.A = 0x00;
 	m_registers.Y = 0x00;
 	m_registers.X = 0x00;
-	m_registers.pc = (MemoryRead(rstVectorH) << 8) + MemoryRead(rstVectorL);	// load PC from reset vector
+	m_registers.pc = (MemoryRead(s_rstVectorH) << 8) + MemoryRead(s_rstVectorL);	// load PC from reset vector
 	m_registers.sp = 0xFD;
 	m_registers.status |= FLAGCONSTANT;
 	m_registers.IllegalOpcode = false;
@@ -1214,7 +1214,7 @@ void MC_Processor6502::Op_BRK(uint16_t src)
 	StackPush(m_registers.pc & 0xFF);
 	StackPush(m_registers.status | FLAGBREAK);
 	SET_INTERRUPT(1);
-	m_registers.pc = (MemoryRead(irqVectorH) << 8) + MemoryRead(irqVectorL);
+	m_registers.pc = (MemoryRead(s_irqVectorH) << 8) + MemoryRead(s_irqVectorL);
 	return;
 }
 //-Protected-------------------------------------------------------------------

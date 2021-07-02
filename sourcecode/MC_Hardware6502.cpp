@@ -253,17 +253,17 @@ void MC_Hardware6502::CpuMemoryMapWrite(uint16_t address, uint8_t value)
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::CpuCalCyclesPerSec()
 {
-    double CpuSpeed = m_CpuSettings.Speed * 100000;
+    double CpuSpeed10th = m_CpuSettings.Speed * 100000;
     m_CpuSettings.CyclesPerSec = (double)(mc_Processor6502.m_TotalCyclesPerSec);
     mc_Processor6502.m_TotalCyclesPerSec = 0;
     if (m_Cpu6502Run && !m_Disassembler6502) {
         m_CpuSettings.AvrSpeed = (m_CpuSettings.AvrSpeed * 0.9) + (m_CpuSettings.CyclesPerSec * 0.1);
         m_CpuSettings.AvrBigSpeed = (m_CpuSettings.AvrBigSpeed * 0.9) + (m_CpuSettings.AvrSpeed * 0.1);
         if (m_CpuSettings.Speed) {
-            if (m_CpuSettings.AvrSpeed > CpuSpeed) {
+            if (m_CpuSettings.AvrSpeed > CpuSpeed10th) {
                 m_CpuSettings.SpeedUpDn += (20.0f / (float)(m_CpuSettings.CyclesPerSec / 100000.0));
             }
-            if (m_CpuSettings.AvrSpeed < CpuSpeed) {
+            if (m_CpuSettings.AvrSpeed < CpuSpeed10th) {
                 m_CpuSettings.SpeedUpDn -= (20.0f / (float)(m_CpuSettings.CyclesPerSec / 100000.0));
             }
         } else {
@@ -463,25 +463,25 @@ void MC_Hardware6502::Cpu6850Uartinit()
 //-----------------------------------------------------------------------------
 uint8_t MC_Hardware6502::CpuEmu6850UartRead(uint16_t address)
 {
-    static uint16_t RxDelayTick = 0;
-    static uint16_t TxDelayTick = 0;
+    static uint16_t s_RxDelayTick = 0;
+    static uint16_t s_TxDelayTick = 0;
     switch (address) {
         case CTRL_6850ADDR: {
-            RxDelayTick++;
-            TxDelayTick++;
+            s_RxDelayTick++;
+            s_TxDelayTick++;
             uint8_t flags = 0;
             if (m_Uart6850.Input.ProcessedIndex < m_Uart6850.Input.Index) {
                 if (m_Uart6850.Registers_SR.bits.RDRF) {
-                    if (RxDelayTick > 10) {
-                        RxDelayTick = 0;
+                    if (s_RxDelayTick > 10) {
+                        s_RxDelayTick = 0;
                         m_Uart6850.Registers_SR.bits.RDRF = 0;
                     }
                     flags |= RDRF6850;
                 }
             } 
             if (m_Uart6850.Registers_SR.bits.TDRE) {
-                if (TxDelayTick > 10) {
-                    TxDelayTick = 0;
+                if (s_TxDelayTick > 10) {
+                    s_TxDelayTick = 0;
                     m_Uart6850.Registers_SR.bits.TDRE = 0;
                  }
             } else {

@@ -139,12 +139,12 @@ class MC_Processor6502
 		Instr				m_InstrTable[256];
 
 		// IRQ, reset, NMI vectors
-		static const uint16_t irqVectorH = 0xFFFF;
-		static const uint16_t irqVectorL = 0xFFFE;
-		static const uint16_t rstVectorH = 0xFFFD;
-		static const uint16_t rstVectorL = 0xFFFC;
-		static const uint16_t nmiVectorH = 0xFFFB;
-		static const uint16_t nmiVectorL = 0xFFFA;
+		static const uint16_t s_irqVectorH = 0xFFFF;
+		static const uint16_t s_irqVectorL = 0xFFFE;
+		static const uint16_t s_rstVectorH = 0xFFFD;
+		static const uint16_t s_rstVectorL = 0xFFFC;
+		static const uint16_t s_nmiVectorH = 0xFFFB;
+		static const uint16_t s_nmiVectorL = 0xFFFA;
 
 		// read/write callbacks
 		typedef void		(*BusWrite)(uint16_t, uint8_t);
