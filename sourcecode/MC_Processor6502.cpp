@@ -55,6 +55,10 @@ MC_Processor6502::MC_Processor6502()
 {
 	memset(&m_registers, 0, sizeof(m_registers));
 	memset(&m_CrashDump, 0, sizeof(m_CrashDump));
+	memset(&m_InstrTable, 0, sizeof(m_InstrTable));
+	memset(&m_DebugInstr, 0, sizeof(m_DebugInstr));
+	MemoryRead = nullptr;
+	MemoryWrite = nullptr;
 	m_TotalCyclesPerSec = 0;
 }
 //-Public----------------------------------------------------------------------
@@ -63,13 +67,18 @@ MC_Processor6502::MC_Processor6502()
 //-----------------------------------------------------------------------------
 MC_Processor6502::MC_Processor6502(BusRead r, BusWrite w)
 {
-	Write = (BusWrite)w;
-	Read = (BusRead)r;
 	Instr instr;
 
 	memset(&m_registers, 0, sizeof(m_registers));
 	memset(&m_CrashDump, 0, sizeof(m_CrashDump));
+	memset(&m_InstrTable, 0, sizeof(m_InstrTable));
+	memset(&m_DebugInstr, 0, sizeof(m_DebugInstr));
+	memset(&instr, 0, sizeof(instr));
+	MemoryRead = nullptr;
+	MemoryWrite = nullptr;
 	m_TotalCyclesPerSec = 0;
+	MemoryWrite = (BusWrite)w;
+	MemoryRead = (BusRead)r;
 	// fill jump table with ILLEGALs
 	instr.addr = &MC_Processor6502::Addr_IMP;
 	instr.code = &MC_Processor6502::Op_ILLEGAL;
@@ -758,7 +767,7 @@ void MC_Processor6502::NMI()
 	StackPush(m_registers.pc & 0xFF);
 	StackPush(m_registers.status);
 	SET_INTERRUPT(1);
-	m_registers.pc = (Read(nmiVectorH) << 8) + Read(nmiVectorL);
+	m_registers.pc = (MemoryRead(nmiVectorH) << 8) + MemoryRead(nmiVectorL);
 	return;
 }
 //-Public----------------------------------------------------------------------
@@ -772,7 +781,7 @@ void MC_Processor6502::IRQ()
 		StackPush(m_registers.pc & 0xFF);
 		StackPush(m_registers.status);
 		SET_INTERRUPT(1);
-		m_registers.pc = (Read(irqVectorH) << 8) + Read(irqVectorL);
+		m_registers.pc = (MemoryRead(irqVectorH) << 8) + MemoryRead(irqVectorL);
 	}
 	return;
 }
@@ -784,7 +793,7 @@ void MC_Processor6502::Reset()
 	m_registers.A = 0x00;
 	m_registers.Y = 0x00;
 	m_registers.X = 0x00;
-	m_registers.pc = (Read(rstVectorH) << 8) + Read(rstVectorL);				// load PC from reset vector
+	m_registers.pc = (MemoryRead(rstVectorH) << 8) + MemoryRead(rstVectorL);	// load PC from reset vector
 	m_registers.sp = 0xFD;
 	m_registers.status |= FLAGCONSTANT;
 	m_registers.IllegalOpcode = false;
@@ -807,8 +816,9 @@ bool MC_Processor6502::RunOneOp()
 
 	if (!m_registers.IllegalOpcode) {
 		m_DebugInstr.pc = m_registers.pc;
-		opcode = Read(m_registers.pc++);										// fetch
+		opcode = MemoryRead(m_registers.pc++);									// fetch
 		m_DebugInstr.opcode = opcode;
+		m_DebugInstr.Updated = true;
 		instr = m_InstrTable[opcode];											// decode
 		m_TotalCyclesPerSec += instr.cycles;
 		Exec(instr);															// execute
@@ -825,15 +835,15 @@ bool MC_Processor6502::RunOneOp()
 	return m_registers.IllegalOpcode;
 }
 //-Public----------------------------------------------------------------------
-// Name: Run(int32_t cyclesRemaining, uint64_t& cycleCount, CycleMethod cycleMethod)
+// Name: RunCode(int32_t cyclesRemaining, uint64_t& cycleCount, CycleMethod cycleMethod)
 //-----------------------------------------------------------------------------
-void MC_Processor6502::Run(int32_t cyclesRemaining, uint64_t& cycleCount, CycleMethod cycleMethod)
+void MC_Processor6502::RunCode(int32_t cyclesRemaining, uint64_t& cycleCount, CycleMethod cycleMethod)
 {
 	uint8_t opcode;
 	Instr instr;
 
 	while (cyclesRemaining > 0 && !m_registers.IllegalOpcode) {
-		opcode = Read(m_registers.pc++);										// fetch
+		opcode = MemoryRead(m_registers.pc++);									// fetch
 		instr = m_InstrTable[opcode];											// decode
 		Exec(instr);															// execute
 		cycleCount += instr.cycles;
@@ -886,8 +896,8 @@ uint16_t MC_Processor6502::Addr_ABS()
 	uint16_t addrH;
 	uint16_t addr;
 
-	addrL = Read(m_registers.pc++);
-	addrH = Read(m_registers.pc++);
+	addrL = MemoryRead(m_registers.pc++);
+	addrH = MemoryRead(m_registers.pc++);
 	addr = addrL + (addrH << 8);
 	return addr;
 }
@@ -896,7 +906,7 @@ uint16_t MC_Processor6502::Addr_ABS()
 //-----------------------------------------------------------------------------
 uint16_t MC_Processor6502::Addr_ZER()
 {
-	return Read(m_registers.pc++);
+	return MemoryRead(m_registers.pc++);
 }
 //-Protected-------------------------------------------------------------------
 // Name: Addr_IMP()
@@ -913,7 +923,7 @@ uint16_t MC_Processor6502::Addr_REL()
 	uint16_t offset;
 	uint16_t addr;
 
-	offset = (uint16_t)Read(m_registers.pc++);
+	offset = (uint16_t)MemoryRead(m_registers.pc++);
 	if (offset & 0x80) 
 		offset |= 0xFF00;
 
@@ -932,12 +942,12 @@ uint16_t MC_Processor6502::Addr_ABI()
 	uint16_t abs;
 	uint16_t addr;
 
-	addrL = Read(m_registers.pc++);
-	addrH = Read(m_registers.pc++);
+	addrL = MemoryRead(m_registers.pc++);
+	addrH = MemoryRead(m_registers.pc++);
 	abs = (addrH << 8) | addrL;
-	effL = Read(abs);
+	effL = MemoryRead(abs);
 #ifndef CMOS_INDIRECT_JMP_FIX
-	effH = Read((abs & 0xFF00) + ((abs + 1) & 0x00FF));
+	effH = MemoryRead((abs & 0xFF00) + ((abs + 1) & 0x00FF));
 #else
 	effH = Read(abs + 1);
 #endif
@@ -949,7 +959,7 @@ uint16_t MC_Processor6502::Addr_ABI()
 //-----------------------------------------------------------------------------
 uint16_t MC_Processor6502::Addr_ZEX()
 {
-	uint16_t addr = (Read(m_registers.pc++) + m_registers.X) % 256;
+	uint16_t addr = (MemoryRead(m_registers.pc++) + m_registers.X) % 256;
 	return addr;
 }
 //-Protected-------------------------------------------------------------------
@@ -957,7 +967,7 @@ uint16_t MC_Processor6502::Addr_ZEX()
 //-----------------------------------------------------------------------------
 uint16_t MC_Processor6502::Addr_ZEY()
 {
-	uint16_t addr = (Read(m_registers.pc++) + m_registers.Y) % 256;
+	uint16_t addr = (MemoryRead(m_registers.pc++) + m_registers.Y) % 256;
 	return addr;
 }
 //-Protected-------------------------------------------------------------------
@@ -969,8 +979,8 @@ uint16_t MC_Processor6502::Addr_ABX()
 	uint16_t addrL;
 	uint16_t addrH;
 
-	addrL = Read(m_registers.pc++);
-	addrH = Read(m_registers.pc++);
+	addrL = MemoryRead(m_registers.pc++);
+	addrH = MemoryRead(m_registers.pc++);
 	addr = addrL + (addrH << 8) + m_registers.X;
 	return addr;
 }
@@ -983,8 +993,8 @@ uint16_t MC_Processor6502::Addr_ABY()
 	uint16_t addrL;
 	uint16_t addrH;
 
-	addrL = Read(m_registers.pc++);
-	addrH = Read(m_registers.pc++);
+	addrL = MemoryRead(m_registers.pc++);
+	addrH = MemoryRead(m_registers.pc++);
 	addr = addrL + (addrH << 8) + m_registers.Y;
 	return addr;
 }
@@ -997,9 +1007,9 @@ uint16_t MC_Processor6502::Addr_INX()
 	uint16_t zeroH;
 	uint16_t addr;
 
-	zeroL = (Read(m_registers.pc++) + m_registers.X) % 256;
+	zeroL = (MemoryRead(m_registers.pc++) + m_registers.X) % 256;
 	zeroH = (zeroL + 1) % 256;
-	addr = Read(zeroL) + (Read(zeroH) << 8);
+	addr = MemoryRead(zeroL) + (MemoryRead(zeroH) << 8);
 	return addr;
 }
 //-Protected-------------------------------------------------------------------
@@ -1011,9 +1021,9 @@ uint16_t MC_Processor6502::Addr_INY()
 	uint16_t zeroH;
 	uint16_t addr;
 
-	zeroL = Read(m_registers.pc++);
+	zeroL = MemoryRead(m_registers.pc++);
 	zeroH = (zeroL + 1) % 256;
-	addr = Read(zeroL) + (Read(zeroH) << 8) + m_registers.Y;
+	addr = MemoryRead(zeroL) + (MemoryRead(zeroH) << 8) + m_registers.Y;
 	return addr;
 }
 //-Protected-------------------------------------------------------------------
@@ -1021,7 +1031,7 @@ uint16_t MC_Processor6502::Addr_INY()
 //-----------------------------------------------------------------------------
 void MC_Processor6502::StackPush(uint8_t byte)
 {
-	Write(0x0100 + m_registers.sp, byte);
+	MemoryWrite(0x0100 + m_registers.sp, byte);
 	if (m_registers.sp == 0x00)
 		m_registers.sp = 0xFF;
 
@@ -1037,7 +1047,7 @@ uint8_t MC_Processor6502::StackPop()
 	else
 		m_registers.sp++;
 
-	return Read(0x0100 + m_registers.sp);
+	return MemoryRead(0x0100 + m_registers.sp);
 }
 //-Protected-------------------------------------------------------------------
 // Name: Exec(Instr i)
@@ -1061,7 +1071,7 @@ void MC_Processor6502::Op_ILLEGAL(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_ADC(uint16_t src)
 {
-	uint8_t m = Read(src);
+	uint8_t m = MemoryRead(src);
 	unsigned int tmp = m + m_registers.A + (IF_CARRY() ? 1 : 0);
 	SET_ZERO(!(tmp & 0xFF));
 	if (IF_DECIMAL()) {
@@ -1087,7 +1097,7 @@ void MC_Processor6502::Op_ADC(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_AND(uint16_t src)
 {
-	uint8_t m = Read(src);
+	uint8_t m = MemoryRead(src);
 	uint8_t res = m & m_registers.A;
 	SET_NEGATIVE(res & 0x80);
 	SET_ZERO(!res);
@@ -1099,13 +1109,13 @@ void MC_Processor6502::Op_AND(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_ASL(uint16_t src)
 {
-	uint8_t m = Read(src);
+	uint8_t m = MemoryRead(src);
 	SET_CARRY(m & 0x80);
 	m <<= 1;
 	m &= 0xFF;
 	SET_NEGATIVE(m & 0x80);
 	SET_ZERO(!m);
-	Write(src, m);
+	MemoryWrite(src, m);
 	return;
 }
 //-Protected-------------------------------------------------------------------
@@ -1157,7 +1167,7 @@ void MC_Processor6502::Op_BEQ(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_BIT(uint16_t src)
 {
-	uint8_t m = Read(src);
+	uint8_t m = MemoryRead(src);
 	uint8_t res = m & m_registers.A;
 	SET_NEGATIVE(res & 0x80);
 	m_registers.status = (m_registers.status & 0x3F) | (uint8_t)(m & 0xC0);
@@ -1175,7 +1185,8 @@ void MC_Processor6502::Op_BMI(uint16_t src)
 	return;
 }
 //-Protected-------------------------------------------------------------------
-// Name Op_BNE(uint16_t src)//-----------------------------------------------------------------------------
+// Name Op_BNE(uint16_t src)
+//-----------------------------------------------------------------------------
 void MC_Processor6502::Op_BNE(uint16_t src)
 {
 	if (!IF_ZERO())	{
@@ -1203,7 +1214,7 @@ void MC_Processor6502::Op_BRK(uint16_t src)
 	StackPush(m_registers.pc & 0xFF);
 	StackPush(m_registers.status | FLAGBREAK);
 	SET_INTERRUPT(1);
-	m_registers.pc = (Read(irqVectorH) << 8) + Read(irqVectorL);
+	m_registers.pc = (MemoryRead(irqVectorH) << 8) + MemoryRead(irqVectorL);
 	return;
 }
 //-Protected-------------------------------------------------------------------
@@ -1263,7 +1274,7 @@ void MC_Processor6502::Op_CLV(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_CMP(uint16_t src)
 {
-	unsigned int tmp = m_registers.A - Read(src);
+	unsigned int tmp = m_registers.A - MemoryRead(src);
 	SET_CARRY(tmp < 0x100);
 	SET_NEGATIVE(tmp & 0x80);
 	SET_ZERO(!(tmp & 0xFF));
@@ -1274,7 +1285,7 @@ void MC_Processor6502::Op_CMP(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_CPX(uint16_t src)
 {
-	unsigned int tmp = m_registers.X - Read(src);
+	unsigned int tmp = m_registers.X - MemoryRead(src);
 	SET_CARRY(tmp < 0x100);
 	SET_NEGATIVE(tmp & 0x80);
 	SET_ZERO(!(tmp & 0xFF));
@@ -1285,7 +1296,7 @@ void MC_Processor6502::Op_CPX(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_CPY(uint16_t src)
 {
-	unsigned int tmp = m_registers.Y - Read(src);
+	unsigned int tmp = m_registers.Y - MemoryRead(src);
 	SET_CARRY(tmp < 0x100);
 	SET_NEGATIVE(tmp & 0x80);
 	SET_ZERO(!(tmp & 0xFF));
@@ -1296,11 +1307,11 @@ void MC_Processor6502::Op_CPY(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_DEC(uint16_t src)
 {
-	uint8_t m = Read(src);
+	uint8_t m = MemoryRead(src);
 	m = (m - 1) % 256;
 	SET_NEGATIVE(m & 0x80);
 	SET_ZERO(!m);
-	Write(src, m);
+	MemoryWrite(src, m);
 	return;
 }
 //-Protected-------------------------------------------------------------------
@@ -1332,7 +1343,7 @@ void MC_Processor6502::Op_DEY(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_EOR(uint16_t src)
 {
-	uint8_t m = Read(src);
+	uint8_t m = MemoryRead(src);
 	m = m_registers.A ^ m;
 	SET_NEGATIVE(m & 0x80);
 	SET_ZERO(!m);
@@ -1343,11 +1354,11 @@ void MC_Processor6502::Op_EOR(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_INC(uint16_t src)
 {
-	uint8_t m = Read(src);
+	uint8_t m = MemoryRead(src);
 	m = (m + 1) % 256;
 	SET_NEGATIVE(m & 0x80);
 	SET_ZERO(!m);
-	Write(src, m);
+	MemoryWrite(src, m);
 }
 //-Protected-------------------------------------------------------------------
 // Name: Op_INX(uint16_t src)
@@ -1393,7 +1404,7 @@ void MC_Processor6502::Op_JSR(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_LDA(uint16_t src)
 {
-	uint8_t m = Read(src);
+	uint8_t m = MemoryRead(src);
 	SET_NEGATIVE(m & 0x80);
 	SET_ZERO(!m);
 	m_registers.A = m;
@@ -1403,7 +1414,7 @@ void MC_Processor6502::Op_LDA(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_LDX(uint16_t src)
 {
-	uint8_t m = Read(src);
+	uint8_t m = MemoryRead(src);
 	SET_NEGATIVE(m & 0x80);
 	SET_ZERO(!m);
 	m_registers.X = m;
@@ -1413,7 +1424,7 @@ void MC_Processor6502::Op_LDX(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_LDY(uint16_t src)
 {
-	uint8_t m = Read(src);
+	uint8_t m = MemoryRead(src);
 	SET_NEGATIVE(m & 0x80);
 	SET_ZERO(!m);
 	m_registers.Y = m;
@@ -1423,12 +1434,12 @@ void MC_Processor6502::Op_LDY(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_LSR(uint16_t src)
 {
-	uint8_t m = Read(src);
+	uint8_t m = MemoryRead(src);
 	SET_CARRY(m & 0x01);
 	m >>= 1;
 	SET_NEGATIVE(0);
 	SET_ZERO(!m);
-	Write(src, m);
+	MemoryWrite(src, m);
 }
 //-Protected-------------------------------------------------------------------
 // Name: Op_LSR_ACC(uint16_t src)
@@ -1454,7 +1465,7 @@ void MC_Processor6502::Op_NOP(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_ORA(uint16_t src)
 {
-	uint8_t m = Read(src);
+	uint8_t m = MemoryRead(src);
 	m = m_registers.A | m;
 	SET_NEGATIVE(m & 0x80);
 	SET_ZERO(!m);
@@ -1500,7 +1511,7 @@ void MC_Processor6502::Op_PLP(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_ROL(uint16_t src)
 {
-	uint16_t m = Read(src);
+	uint16_t m = MemoryRead(src);
 	m <<= 1;
 	if (IF_CARRY())
 		m |= 0x01;
@@ -1509,7 +1520,7 @@ void MC_Processor6502::Op_ROL(uint16_t src)
 	m &= 0xFF;
 	SET_NEGATIVE(m & 0x80);
 	SET_ZERO(!m);
-	Write(src, (uint8_t)m);
+	MemoryWrite(src, (uint8_t)m);
 	return;
 }
 //-Protected-------------------------------------------------------------------
@@ -1534,7 +1545,7 @@ void MC_Processor6502::Op_ROL_ACC(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_ROR(uint16_t src)
 {
-	uint16_t m = Read(src);
+	uint16_t m = MemoryRead(src);
 	if (IF_CARRY())
 		m |= 0x100;
 
@@ -1543,7 +1554,7 @@ void MC_Processor6502::Op_ROR(uint16_t src)
 	m &= 0xFF;
 	SET_NEGATIVE(m & 0x80);
 	SET_ZERO(!m);
-	Write(src, (uint8_t)m);
+	MemoryWrite(src, (uint8_t)m);
 	return;
 }
 //-Protected-------------------------------------------------------------------
@@ -1593,7 +1604,7 @@ void MC_Processor6502::Op_RTS(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_SBC(uint16_t src)
 {
-	uint8_t m = Read(src);
+	uint8_t m = MemoryRead(src);
 	unsigned int tmp = m_registers.A - m - (IF_CARRY() ? 0 : 1);
 	SET_NEGATIVE(tmp & 0x80);
 	SET_ZERO(!(tmp & 0xFF));
@@ -1639,7 +1650,7 @@ void MC_Processor6502::Op_SEI(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_STA(uint16_t src)
 {
-	Write(src, m_registers.A);
+	MemoryWrite(src, m_registers.A);
 	return;
 }
 //-Protected-------------------------------------------------------------------
@@ -1647,7 +1658,7 @@ void MC_Processor6502::Op_STA(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_STX(uint16_t src)
 {
-	Write(src, m_registers.X);
+	MemoryWrite(src, m_registers.X);
 	return;
 }
 //-Protected-------------------------------------------------------------------
@@ -1655,7 +1666,7 @@ void MC_Processor6502::Op_STX(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_STY(uint16_t src)
 {
-	Write(src, m_registers.Y);
+	MemoryWrite(src, m_registers.Y);
 	return;
 }
 //-Protected-------------------------------------------------------------------

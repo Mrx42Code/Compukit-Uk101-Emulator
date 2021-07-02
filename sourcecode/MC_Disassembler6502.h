@@ -42,12 +42,12 @@
 //-----------------------------------------------------------------------------
 // Const
 //-----------------------------------------------------------------------------
-#define VERSION_INFO "v2.2"
-#define NUMBER_OPCODES 151
+#define VERSION_INFO        "v2.2"
+#define NUMBER_OPCODES      151
 
 /* Exceptions for cycle counting */
-#define CYCLES_CROSS_PAGE_ADDS_ONE      (1 << 0)
-#define CYCLES_BRANCH_TAKEN_ADDS_ONE    (1 << 1)
+#define CYCLES_CROSS_PAGE_ADDS_ONE   (1 << 0)
+#define CYCLES_BRANCH_TAKEN_ADDS_ONE (1 << 1)
 
 /** Some compilers don't have EOK in errno.h */
 #ifndef EOK
@@ -58,37 +58,37 @@
 //-----------------------------------------------------------------------------
 /* The 6502's 13 addressing modes */
 typedef enum {
-    IMMED = 0,                      /* Immediate */
-    ABSOL,                          /* Absolute */
-    ZEROP,                          /* Zero Page */
-    IMPLI,                          /* Implied */
-    INDIA,                          /* Indirect Absolute */
-    ABSIX,                          /* Absolute indexed with X */
-    ABSIY,                          /* Absolute indexed with Y */
-    ZEPIX,                          /* Zero page indexed with X */
-    ZEPIY,                          /* Zero page indexed with Y */
-    INDIN,                          /* Indexed indirect (with X) */
-    ININD,                          /* Indirect indexed (with Y) */
-    RELAT,                          /* Relative */
-    ACCUM                           /* Accumulator */
+    IMMED = 0,                                      /* Immediate */
+    ABSOL,                                          /* Absolute */
+    ZEROP,                                          /* Zero Page */
+    IMPLI,                                          /* Implied */
+    INDIA,                                          /* Indirect Absolute */
+    ABSIX,                                          /* Absolute indexed with X */
+    ABSIY,                                          /* Absolute indexed with Y */
+    ZEPIX,                                          /* Zero page indexed with X */
+    ZEPIY,                                          /* Zero page indexed with Y */
+    INDIN,                                          /* Indexed indirect (with X) */
+    ININD,                                          /* Indirect indexed (with Y) */
+    RELAT,                                          /* Relative */
+    ACCUM                                           /* Accumulator */
 } addressing_mode_e;
 
 typedef struct opcode_s {
-    uint8_t number;                 /* Number of the opcode */
-    const char* mnemonic;           /* Index in the name table */
-    addressing_mode_e addressing;   /* Addressing mode */
-    unsigned int cycles;            /* Number of cycles */
-    unsigned int cycles_exceptions; /* Mask of cycle-counting exceptions */
+    uint8_t                 number;                 /* Number of the opcode */
+    const char*             mnemonic;               /* Index in the name table */
+    addressing_mode_e       addressing;             /* Addressing mode */
+    unsigned int            cycles;                 /* Number of cycles */
+    unsigned int            cycles_exceptions;      /* Mask of cycle-counting exceptions */
 } opcode_t;
 
 typedef struct options_s {
-    char* filename;                 /* Input filename */
-    int nes_mode;                   /* 1 if NES commenting and warnings are enabled */
-    int cycle_counting;             /* 1 if we want cycle counting */
-    int hex_output;                 /* 1 if hex dump output is desired at beginning of line */
-    unsigned long max_num_bytes;
-    uint16_t org;                   /* Origin of addresses */
-    long offset;                    /* File offset to start disassembly from */
+    char*                   filename;               /* Input filename */
+    int                     nes_mode;               /* 1 if NES commenting and warnings are enabled */
+    int                     cycle_counting;         /* 1 if we want cycle counting */
+    int                     hex_output;             /* 1 if hex dump output is desired at beginning of line */
+    unsigned long           max_num_bytes;
+    uint16_t                org;                    /* Origin of addresses */
+    long                    offset;                 /* File offset to start disassembly from */
 } options_t;
 //-----------------------------------------------------------------------------
 // Name: class MC_Disassembler6502

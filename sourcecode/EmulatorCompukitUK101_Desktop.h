@@ -37,11 +37,11 @@
 //-----------------------------------------------------------------------------
 // Const
 //-----------------------------------------------------------------------------
-#define IDT_TIMERCyclesPerSec 1
-#define IDT_TIMERIrq 2
-#define IDT_TIMERNmi 3
+#define IDT_TIMERCyclesPerSec   1
+#define IDT_TIMERIrq            2
+#define IDT_TIMERNmi            3
 
-#define MAX_LOADSTRING 100
+#define MAX_LOADSTRING          100
 //-----------------------------------------------------------------------------
 // Struct
 //-----------------------------------------------------------------------------

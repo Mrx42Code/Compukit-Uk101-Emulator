@@ -39,16 +39,16 @@
 //-----------------------------------------------------------------------------
 // Const
 //-----------------------------------------------------------------------------
-#define CrashDumpSize 32
+#define CrashDumpSize		32
 
-#define FLAGNEGATIVE  0x80
-#define FLAGOVERFLOW  0x40
-#define FLAGCONSTANT  0x20
-#define FLAGBREAK     0x10
-#define FLAGDECIMAL   0x08
-#define FLAGINTERRUPT 0x04
-#define FLAGZERO      0x02
-#define FLAGCARRY     0x01
+#define FLAGNEGATIVE		0x80
+#define FLAGOVERFLOW		0x40
+#define FLAGCONSTANT		0x20
+#define FLAGBREAK			0x10
+#define FLAGDECIMAL			0x08
+#define FLAGINTERRUPT		0x04
+#define FLAGZERO			0x02
+#define FLAGCARRY			0x01
 
 #define SET_NEGATIVE(x) (x ? (m_registers.status |= FLAGNEGATIVE) : (m_registers.status &= (~FLAGNEGATIVE)) )
 #define SET_OVERFLOW(x) (x ? (m_registers.status |= FLAGOVERFLOW) : (m_registers.status &= (~FLAGOVERFLOW)) )
@@ -74,13 +74,13 @@
 
 typedef struct Registers6502
 {
-	uint8_t				A;				// accumulator
-	uint8_t				X;				// X-index
-	uint8_t				Y;				// Y-index
-	uint8_t				sp;				// stack pointer
-	uint16_t			pc;				// program counter
-	uint8_t				status;			// status register
-	bool				IllegalOpcode;	// Illegal Op code Flag;
+	uint8_t					A;				// accumulator
+	uint8_t					X;				// X-index
+	uint8_t					Y;				// Y-index
+	uint8_t					sp;				// stack pointer
+	uint16_t				pc;				// program counter
+	uint8_t					status;			// status register
+	bool					IllegalOpcode;	// Illegal Op code Flag;
 } _Registers6502;
 
 enum Flags {
@@ -103,7 +103,7 @@ class MC_Processor6502
 
 	public:
 
-		enum CycleMethod { INST_COUNT, CYCLE_COUNT };
+		enum CycleMethod	{ INST_COUNT, CYCLE_COUNT };
 
 		typedef void		(MC_Processor6502::* CodeExec)(uint16_t);
 		typedef uint16_t	(MC_Processor6502::* AddrExec)();
@@ -119,13 +119,14 @@ class MC_Processor6502
 			uint16_t		address;
 			uint16_t		pc;
 			Instr			Cpu;
+			bool			Updated;
 		} _DebugInstr;
 
 		typedef struct CrashDump6502
 		{
-			Registers6502		Registers[CrashDumpSize];
-			DebugInstr			DebugInstr[CrashDumpSize];
-			int					Index;
+			Registers6502	Registers[CrashDumpSize];
+			DebugInstr		DebugInstr[CrashDumpSize];
+			int				Index;
 
 		} _CrashDump6502;
 
@@ -148,8 +149,8 @@ class MC_Processor6502
 		// read/write callbacks
 		typedef void		(*BusWrite)(uint16_t, uint8_t);
 		typedef uint8_t		(*BusRead)(uint16_t);
-		BusRead				Read;
-		BusWrite			Write;
+		BusRead				MemoryRead;
+		BusWrite			MemoryWrite;
 
 	private:
 
@@ -164,7 +165,7 @@ class MC_Processor6502
 		void				Reset();
 		void				SetPC(uint16_t PC);
 		bool				RunOneOp();
-		void				Run(int32_t cycles, uint64_t& cycleCount, CycleMethod cycleMethod = CYCLE_COUNT);
+		void				RunCode(int32_t cycles, uint64_t& cycleCount, CycleMethod cycleMethod = CYCLE_COUNT);
 		Registers6502		GetRegisters();
 
 	protected:

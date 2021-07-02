@@ -636,11 +636,11 @@ void MC_Hardware6502::MemoryLoad(uint16_t MemoryAddress, uint16_t MemorySize, st
         if (FileSize <= MemorySize) {
             memcpy(&m_MemoryMap[MemoryAddress], memblock, FileSize);
         } else {
-            printf("file to Big for Memory(%04X) Slot File %s", FileSize, FileName.c_str());
+            printf("file to Big for Memory(%04X) Slot File %s\r\n", FileSize, FileName.c_str());
         }
         delete[] memblock;
     } else {
-        printf("Unable to open file %s", FileName.c_str());
+        printf("Unable to open file %s\r\n", FileName.c_str());
     }
 }
 //-Protected-------------------------------------------------------------------
@@ -662,7 +662,7 @@ void MC_Hardware6502::MemorySave(uint16_t MemoryAddress, uint16_t MemorySize, st
         file.close();
         delete[] memblock;
     } else {
-        printf("Unable to Save file %s", FileName.c_str());
+        printf("Unable to Save file %s\r\n", FileName.c_str());
     }
 }
 //-Protected-------------------------------------------------------------------
@@ -740,7 +740,7 @@ void MC_Hardware6502::MemoryLoadIntelFormat(uint16_t MemoryAddress, uint16_t Mem
         }
         file.close();
     } else {
-        printf("Unable to open file %s", FileName.c_str());
+        printf("Unable to open file %s\r\n", FileName.c_str());
     }
 }
 //-Protected-------------------------------------------------------------------
@@ -815,11 +815,11 @@ void MC_Hardware6502::LoadUartData(std::string FileName)
             memcpy(&m_Uart6850.Input.Buffer, memblock, FileSize);
             m_Uart6850.Input.Index = FileSize;
         } else {
-            printf("file to Big for Memory Slot File %s", FileName.c_str());
+            printf("file to Big for Memory Slot File %s\r\n", FileName.c_str());
         }
         delete[] memblock;
     } else {
-        printf("Unable to Open file %s", FileName.c_str());
+        printf("Unable to Open file %s\r\n", FileName.c_str());
     }
 }
 //-Protected-------------------------------------------------------------------
@@ -841,7 +841,7 @@ void MC_Hardware6502::SaveUartData(std::string FileName)
         file.close();
         delete[] memblock;
     } else {
-        printf("Unable to Save file %s", FileName.c_str());
+        printf("Unable to Save file %s\r\n", FileName.c_str());
     }
 }
 //-Protected-------------------------------------------------------------------
@@ -1014,10 +1014,12 @@ void MC_Hardware6502::DebugCrashInfo()
     printf("\r\nCrash Debug Info\r\n");
     printf("----------------------------------------------------------\r\n");
     while (index != mc_Processor6502.m_CrashDump.Index) {
-        Registers = mc_Processor6502.m_CrashDump.Registers[index];
-        mc_Disassembler6502.DisassemblerLine(tmpstr, m_MemoryMap, mc_Processor6502.m_CrashDump.DebugInstr[index].pc, 1);
-        printf("%s A %02X X %02X Y %02X Cycles %d SP $%04X ", tmpstr, Registers.A, Registers.X, Registers.Y, mc_Processor6502.m_CrashDump.DebugInstr[index].Cpu.cycles, 0x0100 + Registers.sp);
-        SHOW(uint8_t, Registers.status);
+        if (mc_Processor6502.m_CrashDump.DebugInstr[index].Updated) {
+            Registers = mc_Processor6502.m_CrashDump.Registers[index];
+            mc_Disassembler6502.DisassemblerLine(tmpstr, m_MemoryMap, mc_Processor6502.m_CrashDump.DebugInstr[index].pc, 1);
+            printf("%s A %02X X %02X Y %02X Cycles %d SP $%04X ", tmpstr, Registers.A, Registers.X, Registers.Y, mc_Processor6502.m_CrashDump.DebugInstr[index].Cpu.cycles, 0x0100 + Registers.sp);
+            SHOW(uint8_t, Registers.status);
+        }
         index++;
         if (index >= CrashDumpSize) {
             index = 0;
