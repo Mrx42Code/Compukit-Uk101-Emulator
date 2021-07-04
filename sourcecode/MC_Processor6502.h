@@ -133,9 +133,9 @@ class MC_Processor6502
 		CrashDump6502		m_CrashDump;
 		DebugInstr			m_DebugInstr;
 		uint64_t			m_TotalCyclesPerSec;
+		Registers6502		m_registers;
 
 	protected:
-		Registers6502		m_registers;
 		Instr				m_InstrTable[256];
 
 		// IRQ, reset, NMI vectors

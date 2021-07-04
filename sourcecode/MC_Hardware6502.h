@@ -35,6 +35,7 @@
 //-----------------------------------------------------------------------------
 // Const
 //-----------------------------------------------------------------------------
+#define CPU6502_CLKREFSPEED				    (1000000 / 10)                      // Cpu 6502 Ref 1 mhz / 10th Sec
 #define CPU6502_SPEED				        1750.0f                             // Cpu 6502 Speed 2 mhz on this pc
 
 #define BasicSelectUk101OrOsi				false                               // Basic Select Comuukit uk101 or Osi
@@ -220,12 +221,12 @@ typedef struct KeyInputType
     uint8_t	                CpuCount;
 } _KeyInputType;
 
-typedef struct ThreadType
+typedef struct CpuThreadType
 {
     std::thread			    Thread;
     bool				    Running;
     bool				    Quit;
-} _ThreadType;
+} _CpuThreadType;
 
 typedef struct CpuSpeedSettings
 {
@@ -235,6 +236,13 @@ typedef struct CpuSpeedSettings
     double                  AvrBigSpeed;
     double                  CyclesPerSec;
 } _CpuSpeedSettings;
+
+typedef struct CpuDebugPanel {
+    uint16_t                DumpStartAddress;
+    uint16_t                DumpEndAddress;
+    uint16_t                BreakPointAddress;
+    bool                    BreakPointFlag;
+} CpuDebugPanel;
 
 //-----------------------------------------------------------------------------
 // Name: class MC_Hardware6502
@@ -248,15 +256,17 @@ class MC_Hardware6502
         bool                m_BasicSelectUk101OrOsi;
         bool                m_Disassembler6502;
         bool                m_Cpu6502Run;
+        bool                m_Cpu6502Step;
         uint8_t             m_MemoryMap[MemoryMapSizeAddress];
         bool                m_MemoryWriteOverride;
         HWND                m_App_Hwnd;
+        CpuDebugPanel       m_CpuDebugPanel;
 
     protected:
         KeyInputType        m_MemoryKeyScan;
         Uart6850            m_Uart6850;
-        ThreadType          mc_ThreadMain;
-        ThreadType          mc_ThreadVideo;
+        CpuThreadType       mc_ThreadMain;
+        CpuThreadType       mc_ThreadVideo;
 
 	private:
 
@@ -271,7 +281,7 @@ class MC_Hardware6502
         void                ReSizeDisplay();
         void                KeyboardMapKey(uint8_t& KeyPress);
 
-        void                CpuCalCyclesPerSec();
+        void                CpuCalCyclesPer10thSec();
         void                CpuIRQ();
         void                CpuNMI();
         void                CpuReset();
@@ -280,6 +290,7 @@ class MC_Hardware6502
         void                CpuLoadFile();
         void                CpuSaveFile();
         void                CpuMemoryMapDump();
+        void                CpuMemoryMapDump(uint16_t StartAddress, uint16_t EndAddress);
         uint8_t             CpuMemoryMapRead(uint16_t address);
         void                CpuMemoryMapWrite(uint16_t address, uint8_t value);
 
@@ -300,7 +311,7 @@ class MC_Hardware6502
         void                SaveUartData(std::string FileName);
         uint16_t            Hex2Dec(std::string s);
         void                PrintHexDump(const char* desc, void* addr, long len);
-        void                PrintHexDump16Bit(const char* desc, void* addr, long len);
+        void                PrintHexDump16Bit(const char* desc, void* addr, long len, long offset);
         void                PrintByteAsBits(char val);
         void                PrintBits(const char* ty, const char* val, unsigned char* bytes, size_t num_bytes);
         void                DebugInfo();
@@ -310,8 +321,6 @@ class MC_Hardware6502
 		void				Thread_Stop();
 		void				Thread_CallBack_Main(int MultiThread_ID);
         void                Thread_CallBack_Video(int MultiThread_ID);
-        void                Thread_Main();
-        void                Thread_Video();
 
     private:
 

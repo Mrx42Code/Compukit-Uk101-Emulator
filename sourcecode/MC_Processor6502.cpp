@@ -790,6 +790,8 @@ void MC_Processor6502::IRQ()
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Reset()
 {
+	memset(&m_CrashDump, 0, sizeof(m_CrashDump));
+	memset(&m_DebugInstr, 0, sizeof(m_DebugInstr));
 	m_registers.A = 0x00;
 	m_registers.Y = 0x00;
 	m_registers.X = 0x00;

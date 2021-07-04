@@ -40,6 +40,7 @@
 #define IDT_TIMERCyclesPerSec   1
 #define IDT_TIMERIrq            2
 #define IDT_TIMERNmi            3
+#define IDT_TIMERDlg            4
 
 #define MAX_LOADSTRING          100
 //-----------------------------------------------------------------------------
@@ -54,9 +55,12 @@ ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK    DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 void                UpdateMenus(HWND hWnd);
 void                AddConsole();
 void                UpdateConsoleTitle();
+std::wstring        ConvertHexUint16ToWstring(uint16_t Value);
+uint16_t            ConvertHexLPWSTRTouint16(LPWSTR Value);
  
 //-----------------------------------------------------------------------------
 #endif // EmulatorCompukitUK101_Desktop_H

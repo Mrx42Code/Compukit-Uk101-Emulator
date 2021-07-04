@@ -38,7 +38,7 @@
 
 using namespace std;
 
-#pragma warning(disable : 4996)
+//#pragma warning(disable : 4996)
 
 //*****************************************************************************  
 // Public Code
@@ -230,23 +230,22 @@ MC_Disassembler6502::~MC_Disassembler6502()
 
 }
 //-Public----------------------------------------------------------------------
-// Name: DisassemblerLine(char* Buffer ,uint8_t* MemoryMap, uint16_t Address, uint16_t byte_count)
+// Name: DisassemblerLine(char* Buffer, size_t BufferSize, uint8_t* MemoryMap, uint16_t Address, uint16_t byte_count)
 //-----------------------------------------------------------------------------
-void MC_Disassembler6502::DisassemblerLine(char* Buffer, uint8_t* MemoryMap, uint16_t Address, uint16_t byte_count)
+void MC_Disassembler6502::DisassemblerLine(char* Buffer, size_t BufferSize, uint8_t* MemoryMap, uint16_t Address, uint16_t byte_count)
 {
     options_t options;
     uint16_t pc;
 
     options.cycle_counting = 0;
     options.hex_output = 1;
-    options.nes_mode = 1;
     options.org = 0xF000;
     options.max_num_bytes = 65536;
     options.offset = 0;
     options.org = Address;
     pc = options.org;
     while ((pc <= 0xFFFFu) && ((pc - options.org) < byte_count)) {
-        Disassemble(Buffer, MemoryMap, &options, &pc);
+        Disassemble(Buffer, BufferSize, MemoryMap, &options, &pc);
         pc++;
     }
 }
@@ -256,20 +255,23 @@ void MC_Disassembler6502::DisassemblerLine(char* Buffer, uint8_t* MemoryMap, uin
 int MC_Disassembler6502::DisassemblerFile(int argc, char* argv[])
 {
     uint16_t byte_count = 0;
+    char errstr[512];
     char tmpstr[512];
     uint8_t* buffer;                                                            /* Memory buffer */
     FILE* input_file;                                                           /* Input file */
     uint16_t pc;                                                                /* Program counter */
     options_s options;                                                          /* Command-line options parsing results */
     int result = 0;
+    errno_t Err = 0;
 
     ParseArgs(argc, argv, &options);
     buffer = (uint8_t*)calloc(1, 65536);
     if (NULL == buffer) {
         UsageAndExit(3, "Could not allocate disassembly memory buffer.");
     }
-    input_file = fopen(options.filename, "rb");
-    if (NULL == input_file) {
+    //input_file = fopen(options.filename, "rb");
+    Err = fopen_s(&input_file, options.filename, "rb");
+    if (Err || NULL == input_file) {
         Version();
         fprintf(stderr, "File not found or invalid filename : %s\n", options.filename);
         exit(2);
@@ -277,7 +279,9 @@ int MC_Disassembler6502::DisassemblerFile(int argc, char* argv[])
     if (options.offset) {
         result = fseek(input_file, options.offset, SEEK_SET);
         if (result < 0) {
-            fprintf(stderr, "fseek(%s, %ld, SEEK_SET) failed: %s (%d)\n", options.filename, options.offset, strerror(errno), result);
+            //fprintf(stderr, "fseek(%s, %ld, SEEK_SET) failed: %s (%d)\n", options.filename, options.offset, strerror(errno), result);
+            strerror_s(errstr, sizeof(errstr), errno);
+            fprintf(stderr, "fseek(%s, %ld, SEEK_SET) failed: %s (%d)\n", options.filename, options.offset, errstr, result);
             exit(2);
         }
     }
@@ -290,7 +294,7 @@ int MC_Disassembler6502::DisassemblerFile(int argc, char* argv[])
     MmitHeader(&options, byte_count);
     pc = options.org;
     while ((pc <= 0xFFFFu) && ((pc - options.org) < byte_count)) {
-        Disassemble(tmpstr, buffer, &options, &pc);
+        Disassemble(tmpstr, sizeof(tmpstr), buffer, &options, &pc);
         fprintf(stdout, "%s\n", tmpstr);
         pc++;
     }
@@ -327,15 +331,12 @@ void MC_Disassembler6502::MmitHeader(options_s* options, int fsize)
     if (options->cycle_counting)
         fprintf(stdout, ";     -> Cycle counting enabled\n");
     
-    if (options->nes_mode)
-        fprintf(stdout, ";     -> NES mode enabled\n");
-    
     (stdout, ";---------------------------------------------------------------------------\n");
 }
 //-Protected-------------------------------------------------------------------
-// Name: AppendCycle(char* input, uint8_t entry, uint16_t pc, uint16_t new_pc) 
+// Name: AppendCycle(char* input, size_t inputsize, uint8_t entry, uint16_t pc, uint16_t new_pc) 
 //-----------------------------------------------------------------------------
-char* MC_Disassembler6502::AppendCycle(char* input, uint8_t entry, uint16_t pc, uint16_t new_pc)
+char* MC_Disassembler6502::AppendCycle(char* input, size_t inputsize, uint8_t entry, uint16_t pc, uint16_t new_pc)
 {
     char tmpstr[256];
     int cycles = m_OpCodeTable[entry].cycles;
@@ -345,70 +346,31 @@ char* MC_Disassembler6502::AppendCycle(char* input, uint8_t entry, uint16_t pc, 
     if (exceptions != 0) {
         if ((exceptions & CYCLES_BRANCH_TAKEN_ADDS_ONE) && (exceptions & CYCLES_CROSS_PAGE_ADDS_ONE)) {
             if (crosses_page) {
-                sprintf(tmpstr, " Cycles: %d/%d", cycles + 1, cycles + 2);
+                sprintf_s(tmpstr, sizeof(tmpstr), " Cycles: %d/%d", cycles + 1, cycles + 2);
             } else {
-                sprintf(tmpstr, " Cycles: %d/%d", cycles, cycles + 1);
+                sprintf_s(tmpstr, sizeof(tmpstr), " Cycles: %d/%d", cycles, cycles + 1);
             }
         } else {
-            sprintf(tmpstr, " Cycles: %d/%d", cycles, cycles + 1);
+            sprintf_s(tmpstr, sizeof(tmpstr), " Cycles: %d/%d", cycles, cycles + 1);
         }
     } else {
-        sprintf(tmpstr, " Cycles: %d", cycles);
+        sprintf_s(tmpstr, sizeof(tmpstr), " Cycles: %d", cycles);
     }
-    strcat(input, tmpstr);
+    strcat_s(input, inputsize, tmpstr);
     return (input + strlen(input));
 }
 //-Protected-------------------------------------------------------------------
-// Name: AddNesStr(char *instr, const char *instr2)
+// Name: AddNesStr(char *instr, size_t instrsize, const char *instr2)
 //-----------------------------------------------------------------------------
-void MC_Disassembler6502::AddNesStr(char *instr, const char *instr2)
+void MC_Disassembler6502::AddNesStr(char *instr, size_t instrsize, const char *instr2)
 {
-    strcat(instr, " [NES] ");
-    strcat(instr, instr2);
+    strcat_s(instr, instrsize, " [NES] ");
+    strcat_s(instr, instrsize, instr2);
 }
 //-Protected-------------------------------------------------------------------
-// Name: AppendNes(char *input, uint16_t arg)
+// Name: Disassemble(char *output, size_t outputsize, uint8_t *buffer, options_s *options, uint16_t *pc)
 //-----------------------------------------------------------------------------
-void MC_Disassembler6502::AppendNes(char *input, uint16_t arg)
-{
-    switch(arg) {
-        case 0x2000: AddNesStr(input, "PPU setup #1"); break;
-        case 0x2001: AddNesStr(input, "PPU setup #2"); break;
-        case 0x2002: AddNesStr(input, "PPU status"); break;
-        case 0x2003: AddNesStr(input, "SPR-RAM address select"); break;
-        case 0x2004: AddNesStr(input, "SPR-RAM data"); break;
-        case 0x2005: AddNesStr(input, "PPU scroll"); break;
-        case 0x2006: AddNesStr(input, "VRAM address select"); break;
-        case 0x2007: AddNesStr(input, "VRAM data"); break;
-        case 0x4000: AddNesStr(input, "Audio -> Square 1"); break;
-        case 0x4001: AddNesStr(input, "Audio -> Square 1"); break;
-        case 0x4002: AddNesStr(input, "Audio -> Square 1"); break;
-        case 0x4003: AddNesStr(input, "Audio -> Square 1"); break;
-        case 0x4004: AddNesStr(input, "Audio -> Square 2"); break;
-        case 0x4005: AddNesStr(input, "Audio -> Square 2"); break;
-        case 0x4006: AddNesStr(input, "Audio -> Square 2"); break;
-        case 0x4007: AddNesStr(input, "Audio -> Square 2"); break;
-        case 0x4008: AddNesStr(input, "Audio -> Triangle"); break;
-        case 0x4009: AddNesStr(input, "Audio -> Triangle"); break;
-        case 0x400a: AddNesStr(input, "Audio -> Triangle"); break;
-        case 0x400b: AddNesStr(input, "Audio -> Triangle"); break;
-        case 0x400c: AddNesStr(input, "Audio -> Noise control reg"); break;
-        case 0x400e: AddNesStr(input, "Audio -> Noise Frequency reg #1"); break;
-        case 0x400f: AddNesStr(input, "Audio -> Noise Frequency reg #2"); break;
-        case 0x4010: AddNesStr(input, "Audio -> DPCM control"); break;
-        case 0x4011: AddNesStr(input, "Audio -> DPCM D/A data"); break;
-        case 0x4012: AddNesStr(input, "Audio -> DPCM address"); break;
-        case 0x4013: AddNesStr(input, "Audio -> DPCM data length"); break;
-        case 0x4014: AddNesStr(input, "Sprite DMA trigger"); break;
-        case 0x4015: AddNesStr(input, "IRQ status / Sound enable"); break;
-        case 0x4016: AddNesStr(input, "Joypad & I/O port for port #1"); break;
-        case 0x4017: AddNesStr(input, "Joypad & I/O port for port #2"); break;
-    }
-}
-//-Protected-------------------------------------------------------------------
-// Name: Disassemble(char *output, uint8_t *buffer, options_s *options, uint16_t *pc)
-//-----------------------------------------------------------------------------
-void MC_Disassembler6502::Disassemble(char *output, uint8_t *buffer, options_s*options, uint16_t *pc)
+void MC_Disassembler6502::Disassemble(char *output, size_t outputsize, uint8_t *buffer, options_s*options, uint16_t *pc)
 {
     char opcode_repr[256], hex_dump[256];
     int opcode_idx;
@@ -430,103 +392,103 @@ void MC_Disassembler6502::Disassemble(char *output, uint8_t *buffer, options_s*o
         }
     }
     if (!found) {
-        sprintf(opcode_repr, ".byte $%02X", opcode);
+        sprintf_s(opcode_repr,sizeof(opcode_repr), ".byte $%02X", opcode);
         if (options->hex_output) {
-            sprintf(hex_dump, "$%04X  %02X ", current_addr, opcode);
-            sprintf(output, "%-16s%-16s  INVALID OPCODE", hex_dump, opcode_repr);
+            sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X ", current_addr, opcode);
+            sprintf_s(output, outputsize, "%-16s%-16s  INVALID OPCODE", hex_dump, opcode_repr);
         } else {
-            sprintf(hex_dump, "$%04X", current_addr);
-            sprintf(output, "%-8s%-16s  INVALID OPCODE", hex_dump, opcode_repr);
+            sprintf_s(hex_dump, sizeof(hex_dump), "$%04X", current_addr);
+            sprintf_s(output, outputsize, "%-8s%-16s  INVALID OPCODE", hex_dump, opcode_repr);
         }
         return;
     }
     mnemonic = m_OpCodeTable[entry].mnemonic;
-    sprintf(hex_dump, "$%04X", current_addr);
+    sprintf_s(hex_dump, sizeof(hex_dump), "$%04X", current_addr);
     switch (m_OpCodeTable[entry].addressing) {
         case IMMED:
             byte_operand = buffer[*pc + 1];
             *pc += 1;
-            sprintf(opcode_repr, "%s #$%02X", mnemonic, byte_operand);
+            sprintf_s(opcode_repr,sizeof(opcode_repr),  "%s #$%02X", mnemonic, byte_operand);
             if (options->hex_output) {
-                sprintf(hex_dump, "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+                sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
             }
             break;
         case ABSOL:
             word_operand = LOAD_WORD(buffer, *pc);
             *pc += 2;
-            sprintf(opcode_repr, "%s $%02X%02X", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
+            sprintf_s(opcode_repr,sizeof(opcode_repr),  "%s $%02X%02X", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
             if (options->hex_output) {
-                sprintf(hex_dump, "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
+                sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
             }
             break;
         case ZEROP:
             byte_operand = buffer[*pc + 1];
             *pc += 1;
-            sprintf(opcode_repr, "%s $%02X", mnemonic, byte_operand);
+            sprintf_s(opcode_repr,sizeof(opcode_repr),  "%s $%02X", mnemonic, byte_operand);
             if (options->hex_output) {
-                sprintf(hex_dump, "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+                sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
             }
             break;
         case IMPLI:
-            sprintf(opcode_repr, "%s", mnemonic);
+            sprintf_s(opcode_repr,sizeof(opcode_repr),  "%s", mnemonic);
             if (options->hex_output) {
-                sprintf(hex_dump, "$%04X  %02X ", current_addr, opcode);
+                sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X ", current_addr, opcode);
             }
             break;
         case INDIA:
             word_operand = LOAD_WORD(buffer, *pc);
             *pc += 2;
-            sprintf(opcode_repr, "%s ($%02X%02X)", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
+            sprintf_s(opcode_repr,sizeof(opcode_repr),  "%s ($%02X%02X)", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
             if (options->hex_output) {
-                sprintf(hex_dump, "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
+                sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
             }
             break;
         case ABSIX:
              word_operand = LOAD_WORD(buffer, *pc);
             *pc += 2;
-            sprintf(opcode_repr, "%s $%02X%02X,X", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
+            sprintf_s(opcode_repr,sizeof(opcode_repr),  "%s $%02X%02X,X", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
             if (options->hex_output) {
-                sprintf(hex_dump, "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
+                sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
             }
             break;
         case ABSIY:
             word_operand = LOAD_WORD(buffer, *pc);
             *pc += 2;
-            sprintf(opcode_repr, "%s $%02X%02X,Y", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
+            sprintf_s(opcode_repr,sizeof(opcode_repr),  "%s $%02X%02X,Y", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
             if (options->hex_output) {
-                sprintf(hex_dump, "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
+                sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
             }
             break;
         case ZEPIX:
             byte_operand = buffer[*pc + 1];
             *pc += 1;
-            sprintf(opcode_repr, "%s $%02X,X", mnemonic, byte_operand);
+            sprintf_s(opcode_repr,sizeof(opcode_repr),  "%s $%02X,X", mnemonic, byte_operand);
             if (options->hex_output) {
-                sprintf(hex_dump, "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+                sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
             }
             break;
         case ZEPIY:
             byte_operand = buffer[*pc + 1];
             *pc += 1;
-            sprintf(opcode_repr, "%s $%02X,Y", mnemonic, byte_operand);
+            sprintf_s(opcode_repr,sizeof(opcode_repr),  "%s $%02X,Y", mnemonic, byte_operand);
             if (options->hex_output) {
-                sprintf(hex_dump, "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+                sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
             }
             break;
         case INDIN:
             byte_operand = buffer[*pc + 1];
             *pc += 1;
-            sprintf(opcode_repr, "%s ($%02X,X)", mnemonic, byte_operand);
+            sprintf_s(opcode_repr,sizeof(opcode_repr),  "%s ($%02X,X)", mnemonic, byte_operand);
             if (options->hex_output) {
-                sprintf(hex_dump, "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+                sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
             }
             break;
         case ININD:
             byte_operand = buffer[*pc + 1];
             *pc += 1;
-            sprintf(opcode_repr, "%s ($%02X),Y", mnemonic, byte_operand);
+            sprintf_s(opcode_repr,sizeof(opcode_repr),  "%s ($%02X),Y", mnemonic, byte_operand);
             if (options->hex_output) {
-                sprintf(hex_dump, "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+                sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
             }
             break;
         case RELAT:
@@ -538,37 +500,25 @@ void MC_Disassembler6502::Disassemble(char *output, uint8_t *buffer, options_s*o
             } else {
                 word_operand += byte_operand & 0x7Fu;
             }
-            sprintf(opcode_repr, "%s $%04X", mnemonic, word_operand);
+            sprintf_s(opcode_repr,sizeof(opcode_repr),  "%s $%04X", mnemonic, word_operand);
             if (options->hex_output) {
-                sprintf(hex_dump, "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+                sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
             }
             break;
         case ACCUM:
-            sprintf(opcode_repr, "%s A", mnemonic);
+            sprintf_s(opcode_repr,sizeof(opcode_repr),  "%s A", mnemonic);
             if (options->hex_output) {
-                sprintf(hex_dump, "$%04X  %02X ", current_addr, opcode);
+                sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X ", current_addr, opcode);
             }
             break;
         default:
             // Will not happen since each entry in opcode_table has address mode set
             break;
     }
-    len = sprintf(output, DUMP_FORMAT, hex_dump, opcode_repr);
+    len = sprintf_s(output, outputsize, DUMP_FORMAT, hex_dump, opcode_repr);
     output += len;
     if (options->cycle_counting) {
-        output = AppendCycle(output, entry, *pc + 1, word_operand);
-    }
-    switch (m_OpCodeTable[entry].addressing) {
-        case ABSOL:
-        case ABSIX:
-        case ABSIY:
-            if (options->nes_mode) {
-                AppendNes(output, word_operand);
-            }
-            break;
-        default:
-            /* Other addressing modes: not enough info to add NES register annotation */
-            break;
+        output = AppendCycle(output, outputsize, entry, *pc + 1, word_operand);
     }
 }
 //-Protected-------------------------------------------------------------------
@@ -589,7 +539,6 @@ void MC_Disassembler6502::Usage()
     fprintf(stderr, "  -m NUM_BYTES : Only disassemble the first NUM_BYTES bytes\n");
     fprintf(stderr, "  -s NUM_BYTES : Disassemble after skipping NUM_BYTES from start of input file\n");
     fprintf(stderr, "  -d           : Enable hex dump within disassembly\n");
-    fprintf(stderr, "  -n           : Enable NES register annotations\n");
     fprintf(stderr, "  -v           : Get only version information\n");
     fprintf(stderr, "  -c           : Enable cycle counting annotations\n");
     fprintf(stderr, "\n");
@@ -633,7 +582,6 @@ void MC_Disassembler6502::ParseArgs(int argc, char *argv[], options_s *options)
 
     options->cycle_counting = 0;
     options->hex_output = 0;
-    options->nes_mode = 0;
     options->org = 0x8000;
     options->max_num_bytes = 65536;
     options->offset = 0;
@@ -645,9 +593,6 @@ void MC_Disassembler6502::ParseArgs(int argc, char *argv[], options_s *options)
             case 'h':
             case '?':
                 UsageAndExit(0, NULL);
-                break;
-            case 'n':
-                options->nes_mode = 1;
                 break;
             case 'c':
                 options->cycle_counting = 1;

@@ -83,7 +83,6 @@ typedef struct opcode_s {
 
 typedef struct options_s {
     char*                   filename;               /* Input filename */
-    int                     nes_mode;               /* 1 if NES commenting and warnings are enabled */
     int                     cycle_counting;         /* 1 if we want cycle counting */
     int                     hex_output;             /* 1 if hex dump output is desired at beginning of line */
     unsigned long           max_num_bytes;
@@ -108,15 +107,14 @@ class MC_Disassembler6502
     public:
                             MC_Disassembler6502();
         virtual				~MC_Disassembler6502();
-        void                DisassemblerLine(char* Buffer, uint8_t* MemoryMap, uint16_t Address, uint16_t byte_count);
+        void                DisassemblerLine(char* Buffer, size_t BufferSize, uint8_t* MemoryMap, uint16_t Address, uint16_t byte_count);
         int                 DisassemblerFile(int argc, char* argv[]);
 
     protected:
         void                MmitHeader(options_s* options, int fsize);
-        char*               AppendCycle(char* input, uint8_t entry, uint16_t pc, uint16_t new_pc);
-        void                AddNesStr(char* instr, const char* instr2);
-        void                AppendNes(char* input, uint16_t arg);
-        void                Disassemble(char* output, uint8_t* buffer, options_s* options, uint16_t* pc);
+        char*               AppendCycle(char* input, size_t inputsize, uint8_t entry, uint16_t pc, uint16_t new_pc);
+        void                AddNesStr(char* instr, size_t instrsize, const char* instr2);
+        void                Disassemble(char* output, size_t outputsize, uint8_t* buffer, options_s* options, uint16_t* pc);
         void                Version();
         void                Usage();
         int                 StrArgToUlong(char* str, unsigned long* value);

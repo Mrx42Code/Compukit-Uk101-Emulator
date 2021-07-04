@@ -81,9 +81,15 @@ MC_Hardware6502::MC_Hardware6502()
     m_CpuSettings.SpeedUpDn = CPU6502_SPEED;
     m_CpuSettings.Speed = 2;
     m_Cpu6502Run = false;
+    m_Cpu6502Step = false;
     m_Disassembler6502 = false;
     m_BasicSelectUk101OrOsi = BasicSelectUk101OrOsi;
     m_App_Hwnd = nullptr;
+    m_CpuDebugPanel.DumpStartAddress = 0x0000;
+    m_CpuDebugPanel.DumpEndAddress = 0xFFFF;
+    m_CpuDebugPanel.BreakPointAddress = 0xFF00;
+    m_CpuDebugPanel.BreakPointFlag = false;
+
     CpuMemoryInit();
     mc_ThreadMain.Running = false;
     mc_ThreadMain.Quit = false;
@@ -249,11 +255,11 @@ void MC_Hardware6502::CpuMemoryMapWrite(uint16_t address, uint8_t value)
     }
 }
 //-Public----------------------------------------------------------------------
-// Name: CpuIRQ()
+// Name: CpuCalCyclesPer10thSec()
 //-----------------------------------------------------------------------------
-void MC_Hardware6502::CpuCalCyclesPerSec()
+void MC_Hardware6502::CpuCalCyclesPer10thSec()
 {
-    double CpuSpeed10th = m_CpuSettings.Speed * 100000;
+    double CpuSpeed10th = m_CpuSettings.Speed * CPU6502_CLKREFSPEED;
     m_CpuSettings.CyclesPerSec = (double)(mc_Processor6502.m_TotalCyclesPerSec);
     mc_Processor6502.m_TotalCyclesPerSec = 0;
     if (m_Cpu6502Run && !m_Disassembler6502) {
@@ -261,10 +267,10 @@ void MC_Hardware6502::CpuCalCyclesPerSec()
         m_CpuSettings.AvrBigSpeed = (m_CpuSettings.AvrBigSpeed * 0.9) + (m_CpuSettings.AvrSpeed * 0.1);
         if (m_CpuSettings.Speed) {
             if (m_CpuSettings.AvrSpeed > CpuSpeed10th) {
-                m_CpuSettings.SpeedUpDn += (20.0f / (float)(m_CpuSettings.CyclesPerSec / 100000.0));
+                m_CpuSettings.SpeedUpDn += (20.0f / (float)(m_CpuSettings.CyclesPerSec / CPU6502_CLKREFSPEED));
             }
             if (m_CpuSettings.AvrSpeed < CpuSpeed10th) {
-                m_CpuSettings.SpeedUpDn -= (20.0f / (float)(m_CpuSettings.CyclesPerSec / 100000.0));
+                m_CpuSettings.SpeedUpDn -= (20.0f / (float)(m_CpuSettings.CyclesPerSec / CPU6502_CLKREFSPEED));
             }
         } else {
             m_CpuSettings.SpeedUpDn = 0;
@@ -296,6 +302,7 @@ void MC_Hardware6502::CpuReset()
     m_Cpu6502Run = false;
     ReSizeDisplay();
     mc_VideoDisplay.Forceupdate();
+    Sleep(10);
     mc_Processor6502.Reset();
     m_Cpu6502Run = Cpu6502Run;
 }
@@ -367,12 +374,25 @@ void MC_Hardware6502::CpuCegmonukRomMod()
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::CpuMemoryMapDump()
 {
-    PrintHexDump16Bit("Memory Dump", &m_MemoryMap, sizeof(m_MemoryMap));
+    PrintHexDump16Bit("Memory Dump", &m_MemoryMap, sizeof(m_MemoryMap), 0);
     if (m_Uart6850.Input.Index > 0) {
         PrintHexDump("Load Buffer Dump", &m_Uart6850.Input.Buffer, m_Uart6850.Input.Index);
     }
     if (m_Uart6850.Output.Index > 0) {
         PrintHexDump("Save Buffer Dump", &m_Uart6850.Output.Buffer, m_Uart6850.Output.Index);
+    }
+}
+//-Public----------------------------------------------------------------------
+// Name: CpuMemoryMapDump(uint16_t StartAddress, uint16_t EndAddress)
+//-----------------------------------------------------------------------------
+void MC_Hardware6502::CpuMemoryMapDump(uint16_t StartAddress, uint16_t EndAddress)
+{
+    long MemSize = (EndAddress - StartAddress) + 1;
+
+    if (MemSize >= 0 && MemSize <= 0x10000 && StartAddress <= EndAddress) {
+        PrintHexDump16Bit("Memory Dump", &m_MemoryMap[StartAddress], (EndAddress - StartAddress) + 1, StartAddress);
+    } else {
+        printf("CpuMemoryMapDump Error %04lX %04lX\r\n", StartAddress, EndAddress);
     }
 }
 //-Public----------------------------------------------------------------------
@@ -910,9 +930,9 @@ void MC_Hardware6502::PrintHexDump(const char* desc, void* addr, long len)
     printf("--------  ------------------------------------------------\r\n");
 }
 //-Protected-------------------------------------------------------------------
-// Name: PrintHexDump16Bit(const char* desc, void* addr, long len)
+// Name: PrintHexDump16Bit(const char* desc, void* addr, long len, long offset)
 //-----------------------------------------------------------------------------
-void MC_Hardware6502::PrintHexDump16Bit(const char* desc, void* addr, long len)
+void MC_Hardware6502::PrintHexDump16Bit(const char* desc, void* addr, long len, long offset)
 {
     long i;
     uint8_t* pc = (uint8_t*)addr;
@@ -936,7 +956,7 @@ void MC_Hardware6502::PrintHexDump16Bit(const char* desc, void* addr, long len)
             if (i != 0) {
                 printf("  | %s |\r\n", buff);
             }
-            printf("$%04lX ", i);
+            printf("$%04lX ", i + offset);
         }
         Data = pc[i];
         if ((i % 16) == 8)
@@ -992,7 +1012,7 @@ void MC_Hardware6502::DebugInfo()
     char tmpstr[512];
 
     Registers6502 Registers = mc_Processor6502.GetRegisters();
-    mc_Disassembler6502.DisassemblerLine(tmpstr, m_MemoryMap, mc_Processor6502.m_DebugInstr.pc, 1);
+    mc_Disassembler6502.DisassemblerLine(tmpstr, sizeof(tmpstr), m_MemoryMap, mc_Processor6502.m_DebugInstr.pc, 1);
     printf("%s A %02X X %02X Y %02X Cycles %d SP $%04X ", tmpstr, Registers.A, Registers.X, Registers.Y, mc_Processor6502.m_DebugInstr.Cpu.cycles, 0x0100 + Registers.sp);
     SHOW(uint8_t, Registers.status);
 }
@@ -1005,7 +1025,7 @@ void MC_Hardware6502::DebugCrashInfo()
     char tmpstr[512];
     Registers6502 Registers;
 
-    PrintHexDump16Bit("Crash Memory Dump $0000-$03FF", &m_MemoryMap, 1024);
+    PrintHexDump16Bit("Crash Memory Dump $0000-$03FF", &m_MemoryMap, 1024, 0);
     index = mc_Processor6502.m_CrashDump.Index;
     index++;
     if (index >= CrashDumpSize) {
@@ -1016,7 +1036,7 @@ void MC_Hardware6502::DebugCrashInfo()
     while (index != mc_Processor6502.m_CrashDump.Index) {
         if (mc_Processor6502.m_CrashDump.DebugInstr[index].Updated) {
             Registers = mc_Processor6502.m_CrashDump.Registers[index];
-            mc_Disassembler6502.DisassemblerLine(tmpstr, m_MemoryMap, mc_Processor6502.m_CrashDump.DebugInstr[index].pc, 1);
+            mc_Disassembler6502.DisassemblerLine(tmpstr, sizeof(tmpstr), m_MemoryMap, mc_Processor6502.m_CrashDump.DebugInstr[index].pc, 1);
             printf("%s A %02X X %02X Y %02X Cycles %d SP $%04X ", tmpstr, Registers.A, Registers.X, Registers.Y, mc_Processor6502.m_CrashDump.DebugInstr[index].Cpu.cycles, 0x0100 + Registers.sp);
             SHOW(uint8_t, Registers.status);
         }
@@ -1068,11 +1088,32 @@ void MC_Hardware6502::Thread_CallBack_Main(int MultiThread_ID)
     uint32_t CpuDelayTime = 0;
 
     mc_ThreadMain.Running = true;
-    while (mc_ThreadMain.Quit == false) {
+    while (!mc_ThreadMain.Quit) {
         CpuDelayTime++;
         if (CpuDelayTime > m_CpuSettings.SpeedUpDn) {
             CpuDelayTime = 0;
-            Thread_Main();
+            if (m_Cpu6502Run) {
+                if (m_CpuDebugPanel.BreakPointFlag && m_CpuDebugPanel.BreakPointAddress == mc_Processor6502.m_registers.pc) {
+                    m_Cpu6502Run = false;
+                    m_Disassembler6502 = true;
+                    printf("Cpu BreakPoint\r\n");
+                }
+                if (!mc_Processor6502.RunOneOp()) {
+                    if (m_Disassembler6502) {
+                        DebugInfo();
+                    }
+                } else {
+                    m_Cpu6502Run = false;                                       // Cpu Crash (Stop Cpu + Memory Dump + Debug Info)
+                    DebugCrashInfo();
+                }
+            } else if(m_Cpu6502Step) {
+                m_Cpu6502Step = false;
+                if (!mc_Processor6502.RunOneOp()) {
+                    DebugInfo();
+                } else {
+                    DebugCrashInfo();
+                }
+            }
         }
     }
     mc_ThreadMain.Running = false;
@@ -1083,43 +1124,20 @@ void MC_Hardware6502::Thread_CallBack_Main(int MultiThread_ID)
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::Thread_CallBack_Video(int MultiThread_ID)
 {
+    int VideoCompare;
+
     mc_ThreadVideo.Running = true;
-    while (mc_ThreadVideo.Quit == false) {
-        Sleep(20);
-        Thread_Video();
+    while (!mc_ThreadVideo.Quit) {
+        Sleep(40);
+        if (mc_VideoDisplay.m_Update) {
+            mc_VideoDisplay.m_Update = false;
+            VideoCompare = memcmp(&m_MemoryMap[MemoryVideoAddress], mc_VideoDisplay.m_MemoryVideoCompare, sizeof(mc_VideoDisplay.m_MemoryVideoCompare));
+            if (VideoCompare) {
+                memcpy(mc_VideoDisplay.m_MemoryVideoCompare, &m_MemoryMap[MemoryVideoAddress], sizeof(mc_VideoDisplay.m_MemoryVideoCompare));
+                mc_VideoDisplay.CpuEmuRenderDisplay();
+            }
+        }
     }
     mc_ThreadVideo.Running = false;
     mc_ThreadVideo.Thread.detach();
-}
-//-Protected-------------------------------------------------------------------
-// Name: hread_Main()
-//-----------------------------------------------------------------------------
-void MC_Hardware6502::Thread_Main()
-{
-    if (m_Cpu6502Run) {
-        if (!mc_Processor6502.RunOneOp()) {
-            if (m_Disassembler6502) {
-                DebugInfo();
-            }
-        } else {
-            m_Cpu6502Run = false;                                               // Cpu Crash (Stop Cpu + Memory Dump + Debug Info)
-            DebugCrashInfo();
-        }
-    }
-}
-//-Protected-------------------------------------------------------------------
-// Name: Thread_Video()
-//-----------------------------------------------------------------------------
-void MC_Hardware6502::Thread_Video()
-{
-    int VideoCompare;
-
-    if (mc_VideoDisplay.m_Update) {
-        mc_VideoDisplay.m_Update = false;
-        VideoCompare = memcmp(&m_MemoryMap[MemoryVideoAddress], mc_VideoDisplay.m_MemoryVideoCompare, sizeof(mc_VideoDisplay.m_MemoryVideoCompare));
-        if (VideoCompare) {
-            memcpy(mc_VideoDisplay.m_MemoryVideoCompare, &m_MemoryMap[MemoryVideoAddress], sizeof(mc_VideoDisplay.m_MemoryVideoCompare));
-            mc_VideoDisplay.CpuEmuRenderDisplay();
-        }
-    }
 }

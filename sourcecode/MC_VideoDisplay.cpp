@@ -199,11 +199,11 @@ void MC_VideoDisplay::CpuEmuLoadCharacterSetRom(std::string FileName)
         if (FileSize <= MemoryVideoChrMapSize) {
             memcpy(&m_MemoryVideoChrRomMap, memblock, FileSize);
         } else {
-            printf("file to Big for CharacterSetRom File %s", FileName.c_str());
+            printf("file to Big for CharacterSetRom File %s\r\n", FileName.c_str());
         }
         delete[] memblock;
     } else {
-        printf("Unable to open file %s", FileName.c_str());
+        printf("Unable to open file %s\r\n", FileName.c_str());
     }
 }
 

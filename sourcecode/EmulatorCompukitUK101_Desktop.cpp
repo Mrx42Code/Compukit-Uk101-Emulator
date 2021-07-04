@@ -40,6 +40,7 @@ using namespace std;
 // IMPLEMENT_DYNCREATE
 //-----------------------------------------------------------------------------
 HINSTANCE m_hInst;                                                              // current instance
+HWND hwndDlg = nullptr;
 WCHAR m_szTitle[MAX_LOADSTRING];                                                // The title bar text
 WCHAR m_szWindowClass[MAX_LOADSTRING];                                          // the main window class name
 
@@ -132,6 +133,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 switch (wmId) {
                     case IDM_ABOUT:
                         DialogBox(m_hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+                        break;
+                    case IDM_DEBUG_CPUDEBUGCONTROLPANEL:
+                        //DialogBox(m_hInst, MAKEINTRESOURCE(IDD_DIALOG_DEBUG), hWnd, DebugControlPanel);
+                        if (!IsWindow(hwndDlg)) {
+                            hwndDlg = CreateDialog(m_hInst, MAKEINTRESOURCE(IDD_DIALOG_DEBUG), hWnd, (DLGPROC)DebugControlPanel);
+                            ShowWindow(hwndDlg, SW_SHOW);
+                        }
                         break;
                     case IDM_EXIT:
                         KillTimer(hWnd, IDT_TIMERCyclesPerSec);
@@ -229,7 +237,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_TIMER:
             switch (wParam) {
                 case IDT_TIMERCyclesPerSec: {
-                    mc_Hardware6502.CpuCalCyclesPerSec();
+                    mc_Hardware6502.CpuCalCyclesPer10thSec();
                     UpdateConsoleTitle();
                 }
                 break;
@@ -261,6 +269,117 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
                 return (INT_PTR)TRUE;
             }
             break;
+    }
+    return (INT_PTR)FALSE;
+}
+//-Public----------------------------------------------------------------------
+// Name:  DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+//-----------------------------------------------------------------------------
+INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    int wmId;
+    TCHAR szNewTitle[MAX_PATH];
+    wchar_t StringValue[256];
+    static CpuDebugPanel s_CpuDebugPanel;
+
+    UNREFERENCED_PARAMETER(lParam);
+    switch (message) {
+        case WM_INITDIALOG:
+            s_CpuDebugPanel = mc_Hardware6502.m_CpuDebugPanel;
+            if (mc_Hardware6502.m_Cpu6502Run) {
+                StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel Cpu Run)"));
+            } else {
+                StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel Cpu Stop)"));
+            }
+            SetWindowText(hDlg, szNewTitle);
+            SetWindowText(GetDlgItem(hDlg, IDC_EDIT_DUMPSTARTADDR), ConvertHexUint16ToWstring(mc_Hardware6502.m_CpuDebugPanel.DumpStartAddress).c_str());
+            SetWindowText(GetDlgItem(hDlg, IDC_EDIT_DUMPSTOPADDR), ConvertHexUint16ToWstring(mc_Hardware6502.m_CpuDebugPanel.DumpEndAddress).c_str());
+            SetWindowText(GetDlgItem(hDlg, IDC_EDIT_BREAKPOINTADDR), ConvertHexUint16ToWstring(mc_Hardware6502.m_CpuDebugPanel.BreakPointAddress).c_str());
+            if (mc_Hardware6502.m_CpuDebugPanel.BreakPointFlag) {
+                CheckDlgButton(hDlg, IDC_CHECK_BREAKPOINTADDR, BST_CHECKED);
+            } else {
+                CheckDlgButton(hDlg, IDC_CHECK_BREAKPOINTADDR, BST_UNCHECKED);
+            }
+            SetTimer(hDlg, IDT_TIMERDlg, 500, (TIMERPROC)NULL);
+            return (INT_PTR)TRUE;
+        case WM_TIMER:
+            switch (wParam) {
+                case IDT_TIMERDlg:
+                    if (mc_Hardware6502.m_Disassembler6502) {
+                        CheckDlgButton(hDlg, IDC_CHECK_DEBUG, BST_CHECKED);
+                    } else {
+                        CheckDlgButton(hDlg, IDC_CHECK_DEBUG, BST_UNCHECKED);
+                    }
+                    GetWindowText(GetDlgItem(hDlg, IDC_EDIT_BREAKPOINTADDR), StringValue, 5);
+                    mc_Hardware6502.m_CpuDebugPanel.BreakPointAddress = ConvertHexLPWSTRTouint16(StringValue);
+                    break;
+            }
+            break;
+        case WM_COMMAND:
+            if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
+                if (LOWORD(wParam) == IDCANCEL) {
+                    mc_Hardware6502.m_CpuDebugPanel = s_CpuDebugPanel;
+                }
+                KillTimer(hDlg, IDT_TIMERDlg);
+                EndDialog(hDlg, LOWORD(wParam));
+                hwndDlg = nullptr;
+                return (INT_PTR)TRUE;
+            }
+            wmId = LOWORD(wParam);
+            switch (wmId) {
+                case IDC_BUTTON_MEMORYDUMP:
+                    GetWindowText(GetDlgItem(hDlg, IDC_EDIT_DUMPSTARTADDR), StringValue, 5);
+                    mc_Hardware6502.m_CpuDebugPanel.DumpStartAddress = ConvertHexLPWSTRTouint16(StringValue);
+                    GetWindowText(GetDlgItem(hDlg, IDC_EDIT_DUMPSTOPADDR), StringValue, 5);
+                    mc_Hardware6502.m_CpuDebugPanel.DumpEndAddress = ConvertHexLPWSTRTouint16(StringValue);
+                    mc_Hardware6502.CpuMemoryMapDump(mc_Hardware6502.m_CpuDebugPanel.DumpStartAddress , mc_Hardware6502.m_CpuDebugPanel.DumpEndAddress);
+                    break;
+                case IDC_CHECK_BREAKPOINTADDR:
+                    GetWindowText(GetDlgItem(hDlg, IDC_EDIT_BREAKPOINTADDR), StringValue, 5);
+                    mc_Hardware6502.m_CpuDebugPanel.BreakPointAddress = ConvertHexLPWSTRTouint16(StringValue);
+                    if (IsDlgButtonChecked(hDlg, IDC_CHECK_BREAKPOINTADDR) == BST_CHECKED) {
+                        mc_Hardware6502.m_CpuDebugPanel.BreakPointFlag = true;
+                    } else {
+                        mc_Hardware6502.m_CpuDebugPanel.BreakPointFlag = false;
+                    }
+                    break;
+                case IDC_CHECK_DEBUG:
+                    if (IsDlgButtonChecked(hDlg, IDC_CHECK_DEBUG) == BST_CHECKED) {
+                        mc_Hardware6502.m_Disassembler6502 = true;
+                    } else {
+                        mc_Hardware6502.m_Disassembler6502 = false;
+                    }
+                    break;
+                case IDC_BUTTON_RESET:
+                    mc_Hardware6502.m_Cpu6502Run = false;
+                    mc_Hardware6502.CpuReset();
+                    Sleep(10);
+                    StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel Cpu Reset & Stop)"));
+                    SetWindowText(hDlg, szNewTitle);
+                    printf("Cpu Reset & Stop\r\n");
+                    break;
+                case IDC_BUTTON_STOP:
+                    mc_Hardware6502.m_Cpu6502Run = false;
+                    Sleep(10);
+                    StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel Cpu Stop)"));
+                    SetWindowText(hDlg, szNewTitle);
+                    printf("Cpu Stop\r\n");
+                    break;
+                case IDC_BUTTON_RUN:
+                    printf("Cpu Run\r\n");
+                    Sleep(10);
+                    mc_Hardware6502.m_Cpu6502Run = true;
+                    StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel Cpu Run)"));
+                    SetWindowText(hDlg, szNewTitle);
+                    break;
+                case IDC_BUTTON_STEP:
+                    mc_Hardware6502.m_Cpu6502Run = false;
+                    Sleep(10);
+                    mc_Hardware6502.m_Cpu6502Step = true;
+                    StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel Cpu Step)"));
+                    SetWindowText(hDlg, szNewTitle);
+                    break;
+            }
     }
     return (INT_PTR)FALSE;
 }
@@ -392,14 +511,44 @@ void UpdateConsoleTitle()
             if (!SetConsoleTitle(szNewTitle)) {
                 _tprintf(TEXT("SetConsoleTitle failed (%d)\n"), GetLastError());
             }
-        }
-        else if (mc_Hardware6502.m_Cpu6502Run) {
+        } else if (mc_Hardware6502.m_Cpu6502Run) {
             StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Compukit UK101 Emulator (6502@%.3f Mhz)"), mc_Hardware6502.m_CpuSettings.AvrBigSpeed / 100000);
             if (!SetConsoleTitle(szNewTitle)) {
                 _tprintf(TEXT("SetConsoleTitle failed (%d)\n"), GetLastError());
             }
         }
     }
+}
+//-Public----------------------------------------------------------------------
+// Name:  ConvertHexUint16ToWstring(uint16_t Value)
+//-----------------------------------------------------------------------------
+std::wstring ConvertHexUint16ToWstring(uint16_t Value)
+{
+    char TmpBuffer[255];
+    std::string StrHexValue;
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> convert;
+
+    sprintf_s(TmpBuffer, sizeof(TmpBuffer), "%04lX", Value);
+    StrHexValue = TmpBuffer;
+    std::wstring WStrHexValue = convert.from_bytes(StrHexValue);
+    return WStrHexValue;
+}
+//-Public----------------------------------------------------------------------
+// Name:  ConvertHexLPWSTRTouint16(LPWSTR Value)
+//-----------------------------------------------------------------------------
+uint16_t ConvertHexLPWSTRTouint16(LPWSTR Value)
+{
+    unsigned int UintHexValue = 0;
+    uint16_t HexValue;
+
+    std::wstring Wstr = Value;
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> convert;
+    std::string StrHexValue = convert.to_bytes(Wstr);
+    sscanf_s(StrHexValue.c_str(), "%x", &UintHexValue);
+    if (UintHexValue >= 0 && UintHexValue <= 0xFFFF) {
+        HexValue = (uint16_t)(UintHexValue);
+    }
+    return HexValue;
 }
 
 
