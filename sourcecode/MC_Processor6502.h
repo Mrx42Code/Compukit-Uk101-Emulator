@@ -72,6 +72,14 @@
 // Struct
 //-----------------------------------------------------------------------------
 
+typedef struct Cycles6502Info
+{
+	bool					CanHaveExCycles;
+	uint8_t					Cycles;
+	uint8_t					ExCycles;
+	uint8_t					TotalCycles;
+} _Cycles6502Info;
+
 typedef struct Registers6502
 {
 	uint8_t					A;				// accumulator
@@ -112,31 +120,45 @@ class MC_Processor6502
 			AddrExec		addr;
 			CodeExec		code;
 			uint8_t			cycles;
+			uint8_t			ExCycles;
+			bool			CanHaveExCycles;
 		} _Instr;
 
-		typedef struct DebugInstr {
-			uint8_t			opcode;
-			uint16_t		address;
+		typedef struct DebugInfo6502 {
 			uint16_t		pc;
-			Instr			Cpu;
+			uint8_t			TotalCycles;
+			uint8_t			ExCycles;
 			bool			Updated;
-		} _DebugInstr;
+		} _DebugInfo6502;
+
+		typedef struct CrashInfo6502
+		{
+			Registers6502	Registers;
+			DebugInfo6502	Debug;
+		} _CrashInfo6502;
 
 		typedef struct CrashDump6502
 		{
-			Registers6502	Registers[CrashDumpSize];
-			DebugInstr		DebugInstr[CrashDumpSize];
+			CrashInfo6502   Info[CrashDumpSize];
 			int				Index;
 
 		} _CrashDump6502;
 
+		typedef struct instruction
+		{
+			uint8_t			OpCode;
+			Instr			Instr;
+		} _instruction;
+
 		CrashDump6502		m_CrashDump;
-		DebugInstr			m_DebugInstr;
+		DebugInfo6502		m_Debug;
 		uint64_t			m_TotalCyclesPerSec;
-		Registers6502		m_registers;
 
 	protected:
 		Instr				m_InstrTable[256];
+		instruction			m_instruction;
+		Registers6502		m_registers;
+		Cycles6502Info		m_CyclesInfo;
 
 		// IRQ, reset, NMI vectors
 		static const uint16_t s_irqVectorH = 0xFFFF;
@@ -163,13 +185,15 @@ class MC_Processor6502
 		void				NMI();
 		void				IRQ();
 		void				Reset();
+		uint16_t			GetPC();
 		void				SetPC(uint16_t PC);
+		Registers6502		GetRegisters();
+		void				SetRegisters(Registers6502 Registers);
 		bool				RunOneOp();
 		void				RunCode(int32_t cycles, uint64_t& cycleCount, CycleMethod cycleMethod = CYCLE_COUNT);
-		Registers6502		GetRegisters();
 
 	protected:
-		void				Exec(Instr i);
+		uint8_t				Exec(Instr& instr);
 		// addressing modes
 		uint16_t			Addr_ACC(); // ACCUMULATOR
 		uint16_t			Addr_IMM(); // IMMEDIATE

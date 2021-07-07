@@ -23,6 +23,18 @@
 #define IDC_BUTTON_STEP                 1007
 #define IDC_BUTTON_RESET                1008
 #define IDC_CHECK_DEBUG                 1009
+#define IDC_EDIT_PC                     1010
+#define IDC_EDIT_A                      1011
+#define IDC_EDIT_X                      1012
+#define IDC_EDIT_Y                      1013
+#define IDC_CHECK_ST_N                  1014
+#define IDC_CHECK_ST_O                  1015
+#define IDC_CHECK_ST_NU                 1016
+#define IDC_CHECK_ST_B                  1017
+#define IDC_CHECK_ST_D                  1018
+#define IDC_CHECK_ST_I                  1019
+#define IDC_CHECK_ST_Z                  1020
+#define IDC_CHECK_ST_C                  1021
 #define IDM_FILE_SAVE                   32774
 #define IDM_FILE_LOAD                   32775
 #define IDM_DEBUG_MEMORYDUMP            32777
@@ -52,7 +64,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        130
 #define _APS_NEXT_COMMAND_VALUE         32789
-#define _APS_NEXT_CONTROL_VALUE         1005
+#define _APS_NEXT_CONTROL_VALUE         1015
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

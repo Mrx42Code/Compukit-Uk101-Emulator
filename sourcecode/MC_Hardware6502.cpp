@@ -28,8 +28,8 @@
 //-----------------------------------------------------------------------------
 #include "framework.h"
 #include "MC_Hardware6502.h"
-#include "MC_VideoDisplay.h"
 #include "MC_Processor6502.h"
+#include "MC_VideoDisplay.h"
 #include "MC_Disassembler6502.h"
 
 using namespace std;
@@ -87,9 +87,12 @@ MC_Hardware6502::MC_Hardware6502()
     m_App_Hwnd = nullptr;
     m_CpuDebugPanel.DumpStartAddress = 0x0000;
     m_CpuDebugPanel.DumpEndAddress = 0xFFFF;
-    m_CpuDebugPanel.BreakPointAddress = 0xFF00;
+#if CPU6502_TESTMODE
+        m_CpuDebugPanel.BreakPointAddress = 0x3469;
+#else
+        m_CpuDebugPanel.BreakPointAddress = 0xFF00;
+#endif
     m_CpuDebugPanel.BreakPointFlag = false;
-
     CpuMemoryInit();
     mc_ThreadMain.Running = false;
     mc_ThreadMain.Quit = false;
@@ -195,6 +198,9 @@ void MC_Hardware6502::KeyboardMapKey(uint8_t& KeyPress)
 //-----------------------------------------------------------------------------
 uint8_t MC_Hardware6502::CpuMemoryMapRead(uint16_t address)
 {
+#if CPU6502_TESTMODE
+    return m_MemoryMap[address];
+#else
     if (address >= MemoryRamAddress && address <= MemoryRamEndAddress) {
         return m_MemoryMap[address];
     } else  if (address >= MemoryExtRomAddress && address <= MemoryExtRomEndAddress) {
@@ -222,12 +228,16 @@ uint8_t MC_Hardware6502::CpuMemoryMapRead(uint16_t address)
     } else {
         return 0xFF;
     }
+#endif
 }
 //-Public----------------------------------------------------------------------
 // Name: CpuMemoryMapWrite(uint16_t address, uint8_t value)
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::CpuMemoryMapWrite(uint16_t address, uint8_t value)
 {
+#if CPU6502_TESTMODE
+    m_MemoryMap[address] = value;
+#else
     if (address >= MemoryRamAddress && address <= MemoryRamEndAddress && (MemoryRamRWAddress || m_MemoryWriteOverride)) {
         m_MemoryMap[address] = value;
     } else  if (address >= MemoryExtRomAddress && address <= MemoryExtRomEndAddress && (MemoryExtRomRWAddress || m_MemoryWriteOverride)) {
@@ -253,6 +263,7 @@ void MC_Hardware6502::CpuMemoryMapWrite(uint16_t address, uint8_t value)
     } else  if (address >= MemoryMonitorRomAddress && address <= MemoryMonitorRomEndAddress && (MemoryMonitorRomRWAddress || m_MemoryWriteOverride)) {
         m_MemoryMap[address] = value;
     }
+#endif
 }
 //-Public----------------------------------------------------------------------
 // Name: CpuCalCyclesPer10thSec()
@@ -304,6 +315,9 @@ void MC_Hardware6502::CpuReset()
     mc_VideoDisplay.Forceupdate();
     Sleep(10);
     mc_Processor6502.Reset();
+#if CPU6502_TESTMODE
+    mc_Processor6502.SetPC(0x0400);
+#endif
     m_Cpu6502Run = Cpu6502Run;
 }
 //-Public----------------------------------------------------------------------
@@ -313,10 +327,15 @@ void MC_Hardware6502::CpuInitializeAndReset()
 {
     CpuMemoryInit();
     CpuLoadRoms();
+#if CPU6502_TESTMODE == false
     CpuCegmonukRomMod();
+#endif
     ReSizeDisplay();
     mc_VideoDisplay.Forceupdate();
     mc_Processor6502.Reset();
+#if CPU6502_TESTMODE
+    mc_Processor6502.SetPC(0x0400);
+#endif
     m_Cpu6502Run = true;
 }
 //-Public----------------------------------------------------------------------
@@ -436,6 +455,9 @@ void MC_Hardware6502::CpuMemoryInit()
     m_Cpu6502Run = false;
     m_Disassembler6502 = false;
     m_MemoryWriteOverride = false;
+#if CPU6502_TESTMODE
+    memset(&m_MemoryMap, 0xFF, sizeof(m_MemoryMap));
+#else
     memset(&m_MemoryMap, 0xFF, sizeof(m_MemoryMap));
     memset(&m_MemoryMap[MemoryRamAddress], 0x00, MemoryRamSizeAddress);
     memset(&m_MemoryMap[MemoryExtRomAddress], 0xFF, MemoryExtRomSizeAddress);
@@ -448,6 +470,7 @@ void MC_Hardware6502::CpuMemoryInit()
     memset(&m_MemoryMap[MemoryKeyboardAddress], 0xFF, MemoryKeyboardSizeAddress);
     memset(&m_MemoryMap[Memory6850Address], 0x00, Memory6850SizeAddress);
     memset(&m_MemoryMap[MemoryMonitorRomAddress], 0xFF, MemoryMonitorRomSizeAddress);
+#endif
     memset(&m_MemoryKeyScan, 0x00, sizeof(m_MemoryKeyScan));
     m_MemoryKeyScan.KeysDone = true;
     memset(&m_Uart6850, 0x00, sizeof(m_Uart6850));
@@ -475,8 +498,10 @@ void MC_Hardware6502::Cpu6850Uartinit()
     m_Uart6850.Output.CharData = 0;
     m_Uart6850.Output.ProcessedIndex = 0;
     m_Uart6850.Output.Index = 0;
+#if CPU6502_TESTMODE == false
     m_MemoryMap[DATA_6850ADDR] = m_Uart6850.Input.CharData;
     m_MemoryMap[CTRL_6850ADDR] = m_Uart6850.Registers_SR.byte;
+#endif
 }
 //-Protected-------------------------------------------------------------------
 // Name: CpuEmu6850UartRead(uint16_t address)
@@ -596,45 +621,48 @@ uint8_t MC_Hardware6502::CpuEmuKeyboard(uint16_t address, bool RW)
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::CpuLoadRoms()
 {
-
-#if Basic5Test
-    MemoryLoad(0x9000, 0x0800, "GoodRoms/Roms/Basic5ROM");
-    MemoryLoad(0x9800, 0x0800, "GoodRoms/Roms/BasicXROM");
-    MemoryLoad(0xA000, 0x0800, "GoodRoms/Roms/Basic1ROM");
-    MemoryLoad(0xA800, 0x0800, "GoodRoms/Roms/Basic2ROM");
-    MemoryLoad(0xB000, 0x0800, "GoodRoms/Roms/Basic3ROM");
-    MemoryLoad(0xB800, 0x0800, "GoodRoms/Roms/PremierBasic4ROM");
+#if CPU6502_TESTMODE
+    MemoryLoad(0x000A, 65526, "GoodRoms/6502_functional_test.bin");
 #else
-    MemoryLoad(MemoryExtRomAddress, MemoryExtRomSizeAddress, "GoodRoms/ExtMonitor.rom");                                                // Ext Rom
-    //MemoryLoad(MemoryDiskRomAddress, MemoryDiskRomAddress, "GoodRoms/Disk.rom");                                                      // Disk Rom
-    if (m_BasicSelectUk101OrOsi) {
-        MemoryLoad(MemoryBasicRomAddress, MemoryBasicRomSizeAddress, "GoodRoms/BASIC-OSI-8k.rom");                                      // Basic Osi Rom
-    } else {
-        MemoryLoad(MemoryBasicRomAddress, MemoryBasicRomSizeAddress, "GoodRoms/BASIC-UK101-8k.rom");                                    // Basic CompuKit Rom
-    }
-#endif
-
-#if F000OrF800_Rom
-    #if HardWareHiResScreen
-        MemoryLoad(MemoryMonitorRomAddress, MemoryMonitorRomSizeAddress, "GoodRoms/WEMonUK101_48x48.rom");                             // Monitor Rom WEMonUK101 48x48
+    #if Basic5Test
+        MemoryLoad(0x9000, 0x0800, "GoodRoms/Roms/Basic5ROM");
+        MemoryLoad(0x9800, 0x0800, "GoodRoms/Roms/BasicXROM");
+        MemoryLoad(0xA000, 0x0800, "GoodRoms/Roms/Basic1ROM");
+        MemoryLoad(0xA800, 0x0800, "GoodRoms/Roms/Basic2ROM");
+        MemoryLoad(0xB000, 0x0800, "GoodRoms/Roms/Basic3ROM");
+        MemoryLoad(0xB800, 0x0800, "GoodRoms/Roms/PremierBasic4ROM");
     #else
-        MemoryLoad(MemoryMonitorRomAddress, MemoryMonitorRomSizeAddress, "GoodRoms/WEMonUK101.rom");                                   // Monitor Rom WEMonUK101
-    #endif
-#else
-    #if HardWareHiResScreen
-        MemoryLoad(MemoryMonitorRomAddress, MemoryMonitorRomSizeAddress, "GoodRoms/cegmonuk48x48.rom");                                // Monitor  cegmonuk 48x48
-    #endif
-    #if HardWareMedResScreen     
-        MemoryLoad(MemoryMonitorRomAddress, MemoryMonitorRomSizeAddress, "GoodRoms/cegmonuk48x32.rom");                                // Monitor  cegmonuk 48x32
-    #endif
-    #if HardWareLoResScreen
-        MemoryLoad(MemoryMonitorRomAddress, MemoryMonitorRomSizeAddress, "GoodRoms/cegmonuk48x16.rom");                                // Monitor  cegmonuk 48x16
-        //MemoryLoad(MemoryMonitorRomAddress, MemoryMonitorRomSizeAddress, "GoodRoms/cegmonuk.rom");                                   // Monitor  cegmonuk
-        //MemoryLoadIntelFormat(MemoryMonitorRomAddress, MemoryMonitorRomSizeAddress, "GoodRoms/cegmonuk.int");                        // Monitor  cegmonuk Intel File Format  
+        MemoryLoad(MemoryExtRomAddress, MemoryExtRomSizeAddress, "GoodRoms/ExtMonitor.rom");                                                // Ext Rom
+        //MemoryLoad(MemoryDiskRomAddress, MemoryDiskRomAddress, "GoodRoms/Disk.rom");                                                      // Disk Rom
+        if (m_BasicSelectUk101OrOsi) {
+            MemoryLoad(MemoryBasicRomAddress, MemoryBasicRomSizeAddress, "GoodRoms/BASIC-OSI-8k.rom");                                      // Basic Osi Rom
+        } else {
+            MemoryLoad(MemoryBasicRomAddress, MemoryBasicRomSizeAddress, "GoodRoms/BASIC-UK101-8k.rom");                                    // Basic CompuKit Rom
+        }
     #endif
 
+    #if F000OrF800_Rom
+        #if HardWareHiResScreen
+            MemoryLoad(MemoryMonitorRomAddress, MemoryMonitorRomSizeAddress, "GoodRoms/WEMonUK101_48x48.rom");                             // Monitor Rom WEMonUK101 48x48
+        #else
+            MemoryLoad(MemoryMonitorRomAddress, MemoryMonitorRomSizeAddress, "GoodRoms/WEMonUK101.rom");                                   // Monitor Rom WEMonUK101
+        #endif
+    #else
+        #if HardWareHiResScreen
+            MemoryLoad(MemoryMonitorRomAddress, MemoryMonitorRomSizeAddress, "GoodRoms/cegmonuk48x48.rom");                                // Monitor  cegmonuk 48x48
+        #endif
+        #if HardWareMedResScreen     
+            MemoryLoad(MemoryMonitorRomAddress, MemoryMonitorRomSizeAddress, "GoodRoms/cegmonuk48x32.rom");                                // Monitor  cegmonuk 48x32
+        #endif
+        #if HardWareLoResScreen
+            MemoryLoad(MemoryMonitorRomAddress, MemoryMonitorRomSizeAddress, "GoodRoms/cegmonuk48x16.rom");                                // Monitor  cegmonuk 48x16
+            //MemoryLoad(MemoryMonitorRomAddress, MemoryMonitorRomSizeAddress, "GoodRoms/cegmonuk.rom");                                   // Monitor  cegmonuk
+            //MemoryLoadIntelFormat(MemoryMonitorRomAddress, MemoryMonitorRomSizeAddress, "GoodRoms/cegmonuk.int");                        // Monitor  cegmonuk Intel File Format  
+        #endif
+
+    #endif
+    mc_VideoDisplay.CpuEmuLoadCharacterSetRom("GoodRoms/CharacterSetuk101.rom");                                                            // Character Set Rom
 #endif
-    mc_VideoDisplay.CpuEmuLoadCharacterSetRom("GoodRoms/CharacterSetuk101.rom");                                                        // Character Set Rom
 }
 //-Protected-------------------------------------------------------------------
 // Name: MemoryLoad(uint16_t MemoryAddress , uint16_t MemorySize, std::string FileName)
@@ -643,20 +671,21 @@ void MC_Hardware6502::MemoryLoad(uint16_t MemoryAddress, uint16_t MemorySize, st
 {
     streampos size;
     uint8_t* memblock;
-    uint16_t FileSize = 0;
+    uint32_t FileSize = 0;
+    uint32_t MemMapMaxSize = MemoryAddress + MemorySize;
 
     ifstream file(FileName, ios::in | ios::binary | ios::ate);
     if (file.is_open()) {
         size = file.tellg();
-        memblock = new uint8_t[(uint16_t)size];
+        memblock = new uint8_t[size];
         file.seekg(0, ios::beg);
         file.read((char*)memblock, size);
         file.close();
-        FileSize = (uint16_t)size;
-        if (FileSize <= MemorySize) {
+        FileSize = (uint32_t)size;
+        if (FileSize <= MemorySize && MemMapMaxSize <= 0x10000) {
             memcpy(&m_MemoryMap[MemoryAddress], memblock, FileSize);
         } else {
-            printf("file to Big for Memory(%04X) Slot File %s\r\n", FileSize, FileName.c_str());
+            printf("file to Big for Memory(%06X,%06X) Slot File %s\r\n", FileSize, MemMapMaxSize -1, FileName.c_str());
         }
         delete[] memblock;
     } else {
@@ -1012,8 +1041,8 @@ void MC_Hardware6502::DebugInfo()
     char tmpstr[512];
 
     Registers6502 Registers = mc_Processor6502.GetRegisters();
-    mc_Disassembler6502.DisassemblerLine(tmpstr, sizeof(tmpstr), m_MemoryMap, mc_Processor6502.m_DebugInstr.pc, 1);
-    printf("%s A %02X X %02X Y %02X Cycles %d SP $%04X ", tmpstr, Registers.A, Registers.X, Registers.Y, mc_Processor6502.m_DebugInstr.Cpu.cycles, 0x0100 + Registers.sp);
+    mc_Disassembler6502.DisassemblerLine(tmpstr, sizeof(tmpstr), m_MemoryMap, mc_Processor6502.m_Debug.pc, 1);
+    printf("%s A %02X X %02X Y %02X Cycles %d(%d) SP $%04X ", tmpstr, Registers.A, Registers.X, Registers.Y, mc_Processor6502.m_Debug.TotalCycles, mc_Processor6502.m_Debug.ExCycles, 0x0100 + Registers.sp);
     SHOW(uint8_t, Registers.status);
 }
 //-Protected-------------------------------------------------------------------
@@ -1034,10 +1063,10 @@ void MC_Hardware6502::DebugCrashInfo()
     printf("\r\nCrash Debug Info\r\n");
     printf("----------------------------------------------------------\r\n");
     while (index != mc_Processor6502.m_CrashDump.Index) {
-        if (mc_Processor6502.m_CrashDump.DebugInstr[index].Updated) {
-            Registers = mc_Processor6502.m_CrashDump.Registers[index];
-            mc_Disassembler6502.DisassemblerLine(tmpstr, sizeof(tmpstr), m_MemoryMap, mc_Processor6502.m_CrashDump.DebugInstr[index].pc, 1);
-            printf("%s A %02X X %02X Y %02X Cycles %d SP $%04X ", tmpstr, Registers.A, Registers.X, Registers.Y, mc_Processor6502.m_CrashDump.DebugInstr[index].Cpu.cycles, 0x0100 + Registers.sp);
+        if (mc_Processor6502.m_CrashDump.Info[index].Debug.Updated) {
+            Registers = mc_Processor6502.m_CrashDump.Info[index].Registers;
+            mc_Disassembler6502.DisassemblerLine(tmpstr, sizeof(tmpstr), m_MemoryMap, mc_Processor6502.m_CrashDump.Info[index].Debug.pc, 1);
+            printf("%s A %02X X %02X Y %02X Cycles %d(%d) SP $%04X ", tmpstr, Registers.A, Registers.X, Registers.Y, mc_Processor6502.m_CrashDump.Info[index].Debug.TotalCycles, mc_Processor6502.m_CrashDump.Info[index].Debug.ExCycles, 0x0100 + Registers.sp);
             SHOW(uint8_t, Registers.status);
         }
         index++;
@@ -1093,25 +1122,25 @@ void MC_Hardware6502::Thread_CallBack_Main(int MultiThread_ID)
         if (CpuDelayTime > m_CpuSettings.SpeedUpDn) {
             CpuDelayTime = 0;
             if (m_Cpu6502Run) {
-                if (m_CpuDebugPanel.BreakPointFlag && m_CpuDebugPanel.BreakPointAddress == mc_Processor6502.m_registers.pc) {
+                if (m_CpuDebugPanel.BreakPointFlag && m_CpuDebugPanel.BreakPointAddress == mc_Processor6502.GetPC()) {
                     m_Cpu6502Run = false;
                     m_Disassembler6502 = true;
                     printf("Cpu BreakPoint\r\n");
                 }
-                if (!mc_Processor6502.RunOneOp()) {
+                if (mc_Processor6502.RunOneOp()) {
+                    m_Cpu6502Run = false;                                       // Cpu Crash (Stop Cpu + Memory Dump + Debug Info)
+                    DebugCrashInfo();
+                } else {
                     if (m_Disassembler6502) {
                         DebugInfo();
                     }
-                } else {
-                    m_Cpu6502Run = false;                                       // Cpu Crash (Stop Cpu + Memory Dump + Debug Info)
-                    DebugCrashInfo();
                 }
             } else if(m_Cpu6502Step) {
                 m_Cpu6502Step = false;
-                if (!mc_Processor6502.RunOneOp()) {
-                    DebugInfo();
-                } else {
+                if (mc_Processor6502.RunOneOp()) {
                     DebugCrashInfo();
+                } else {
+                    DebugInfo();
                 }
             }
         }
@@ -1124,11 +1153,13 @@ void MC_Hardware6502::Thread_CallBack_Main(int MultiThread_ID)
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::Thread_CallBack_Video(int MultiThread_ID)
 {
+#if CPU6502_TESTMODE == false
     int VideoCompare;
-
+#endif
     mc_ThreadVideo.Running = true;
     while (!mc_ThreadVideo.Quit) {
         Sleep(40);
+#if CPU6502_TESTMODE == false
         if (mc_VideoDisplay.m_Update) {
             mc_VideoDisplay.m_Update = false;
             VideoCompare = memcmp(&m_MemoryMap[MemoryVideoAddress], mc_VideoDisplay.m_MemoryVideoCompare, sizeof(mc_VideoDisplay.m_MemoryVideoCompare));
@@ -1137,6 +1168,7 @@ void MC_Hardware6502::Thread_CallBack_Video(int MultiThread_ID)
                 mc_VideoDisplay.CpuEmuRenderDisplay();
             }
         }
+#endif
     }
     mc_ThreadVideo.Running = false;
     mc_ThreadVideo.Thread.detach();

@@ -29,6 +29,7 @@
 #include "framework.h"
 #include "EmulatorCompukitUK101_Desktop.h"
 #include "MC_Hardware6502.h"
+#include "MC_Processor6502.h"
 
 using namespace std;
 
@@ -43,8 +44,10 @@ HINSTANCE m_hInst;                                                              
 HWND hwndDlg = nullptr;
 WCHAR m_szTitle[MAX_LOADSTRING];                                                // The title bar text
 WCHAR m_szWindowClass[MAX_LOADSTRING];                                          // the main window class name
+bool  m_HasSetting = false;
 
 extern MC_Hardware6502 mc_Hardware6502;
+extern MC_Processor6502 mc_Processor6502;
 
 //-----------------------------------------------------------------------------
 // message handlers
@@ -286,6 +289,7 @@ INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARA
     switch (message) {
         case WM_INITDIALOG:
             s_CpuDebugPanel = mc_Hardware6502.m_CpuDebugPanel;
+            m_HasSetting = false;
             if (mc_Hardware6502.m_Cpu6502Run) {
                 StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel Cpu Run)"));
             } else {
@@ -357,6 +361,7 @@ INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARA
                     StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel Cpu Reset & Stop)"));
                     SetWindowText(hDlg, szNewTitle);
                     printf("Cpu Reset & Stop\r\n");
+                    DebugControlPanelSetItems(hDlg);
                     break;
                 case IDC_BUTTON_STOP:
                     mc_Hardware6502.m_Cpu6502Run = false;
@@ -364,8 +369,10 @@ INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARA
                     StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel Cpu Stop)"));
                     SetWindowText(hDlg, szNewTitle);
                     printf("Cpu Stop\r\n");
+                    DebugControlPanelSetItems(hDlg);
                     break;
                 case IDC_BUTTON_RUN:
+                    DebugControlPanelGetItems(hDlg);
                     printf("Cpu Run\r\n");
                     Sleep(10);
                     mc_Hardware6502.m_Cpu6502Run = true;
@@ -375,9 +382,11 @@ INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARA
                 case IDC_BUTTON_STEP:
                     mc_Hardware6502.m_Cpu6502Run = false;
                     Sleep(10);
+                    DebugControlPanelGetItems(hDlg);
                     mc_Hardware6502.m_Cpu6502Step = true;
                     StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel Cpu Step)"));
                     SetWindowText(hDlg, szNewTitle);
+                    DebugControlPanelSetItems(hDlg);
                     break;
             }
     }
@@ -470,6 +479,131 @@ void UpdateMenus(HWND hWnd)
     }
 }
 //-Public----------------------------------------------------------------------
+// Name:  DebugControlPanelSetItems(HWND hWnd)
+//-----------------------------------------------------------------------------
+void DebugControlPanelSetItems(HWND hWnd)
+{
+    Sleep(10);
+    Registers6502 Registers = mc_Processor6502.GetRegisters();
+    SetWindowText(GetDlgItem(hWnd, IDC_EDIT_PC), ConvertHexUint16ToWstring(Registers.pc).c_str());
+    SetWindowText(GetDlgItem(hWnd, IDC_EDIT_A), ConvertHexUint8ToWstring(Registers.A).c_str());
+    SetWindowText(GetDlgItem(hWnd, IDC_EDIT_X), ConvertHexUint8ToWstring(Registers.X).c_str());
+    SetWindowText(GetDlgItem(hWnd, IDC_EDIT_Y), ConvertHexUint8ToWstring(Registers.Y).c_str());
+    if (Registers.status & 0x80) {
+        SetButtonChecked(hWnd, IDC_CHECK_ST_N, BST_CHECKED);
+    } else {
+        SetButtonChecked(hWnd, IDC_CHECK_ST_N, BST_UNCHECKED);
+    }
+    if (Registers.status & 0x40) {
+        SetButtonChecked(hWnd, IDC_CHECK_ST_O, BST_CHECKED);
+    } else {
+        SetButtonChecked(hWnd, IDC_CHECK_ST_O, BST_UNCHECKED);
+    }
+    if (Registers.status & 0x20) {
+        SetButtonChecked(hWnd, IDC_CHECK_ST_NU, BST_CHECKED);
+    } else {
+        SetButtonChecked(hWnd, IDC_CHECK_ST_NU, BST_UNCHECKED);
+    }
+    if (Registers.status & 0x10) {
+        SetButtonChecked(hWnd, IDC_CHECK_ST_B, BST_CHECKED);
+    } else {
+        SetButtonChecked(hWnd, IDC_CHECK_ST_B, BST_UNCHECKED);
+    }
+    if (Registers.status & 0x08) {
+        SetButtonChecked(hWnd, IDC_CHECK_ST_D, BST_CHECKED);
+    } else {
+        SetButtonChecked(hWnd, IDC_CHECK_ST_D, BST_UNCHECKED);
+    }
+    if (Registers.status & 0x04) {
+        SetButtonChecked(hWnd, IDC_CHECK_ST_I, BST_CHECKED);
+    } else {
+        SetButtonChecked(hWnd, IDC_CHECK_ST_I, BST_UNCHECKED);
+    }
+    if (Registers.status & 0x02) {
+        SetButtonChecked(hWnd, IDC_CHECK_ST_Z, BST_CHECKED);
+    } else {
+        SetButtonChecked(hWnd, IDC_CHECK_ST_Z, BST_UNCHECKED);
+    }
+    if (Registers.status & 0x01) {
+        SetButtonChecked(hWnd, IDC_CHECK_ST_C, BST_CHECKED);
+    } else {
+        SetButtonChecked(hWnd, IDC_CHECK_ST_C, BST_UNCHECKED);
+    }
+    Sleep(10);
+    m_HasSetting = true;
+}
+//-Public----------------------------------------------------------------------
+// Name:  DebugControlPanelGetItems(HWND hWnd)
+//-----------------------------------------------------------------------------
+void DebugControlPanelGetItems(HWND hWnd)
+{
+    wchar_t StringValue[256];
+    
+    Sleep(10);
+    if (m_HasSetting) {
+        Registers6502 Registers = mc_Processor6502.GetRegisters();
+        GetWindowText(GetDlgItem(hWnd, IDC_EDIT_PC), StringValue, 5);
+        Registers.pc = ConvertHexLPWSTRTouint16(StringValue);
+        GetWindowText(GetDlgItem(hWnd, IDC_EDIT_A), StringValue, 3);
+        Registers.A = ConvertHexLPWSTRTouint8(StringValue);
+        GetWindowText(GetDlgItem(hWnd, IDC_EDIT_X), StringValue, 3);
+        Registers.X = ConvertHexLPWSTRTouint8(StringValue);
+        GetWindowText(GetDlgItem(hWnd, IDC_EDIT_Y), StringValue, 3);
+        Registers.Y = ConvertHexLPWSTRTouint8(StringValue);
+        if (IsDlgButtonChecked(hWnd, IDC_CHECK_ST_N) == BST_CHECKED) {
+            Registers.status = (Registers.status | 0x80);
+        } else {
+            Registers.status = (Registers.status & 0x7F);
+        }
+        if (IsDlgButtonChecked(hWnd, IDC_CHECK_ST_O) == BST_CHECKED) {
+            Registers.status = (Registers.status | 0x40);
+        } else {
+            Registers.status = (Registers.status & 0xBF);
+        }
+        if (IsDlgButtonChecked(hWnd, IDC_CHECK_ST_NU) == BST_CHECKED) {
+            Registers.status = (Registers.status | 0x20);
+        } else {
+            Registers.status = (Registers.status & 0xDF);
+        }
+        if (IsDlgButtonChecked(hWnd, IDC_CHECK_ST_B) == BST_CHECKED) {
+            Registers.status = (Registers.status | 0x10);
+        } else {
+            Registers.status = (Registers.status & 0xEF);
+        }
+        if (IsDlgButtonChecked(hWnd, IDC_CHECK_ST_D) == BST_CHECKED) {
+            Registers.status = (Registers.status | 0x08);
+        } else {
+            Registers.status = (Registers.status & 0xF7);
+        }
+        if (IsDlgButtonChecked(hWnd, IDC_CHECK_ST_I) == BST_CHECKED) {
+            Registers.status = (Registers.status | 0x04);
+        } else {
+            Registers.status = (Registers.status & 0xFB);
+        }
+        if (IsDlgButtonChecked(hWnd, IDC_CHECK_ST_Z) == BST_CHECKED) {
+            Registers.status = (Registers.status | 0x02);
+        } else {
+            Registers.status = (Registers.status & 0xFD);
+        }
+        if (IsDlgButtonChecked(hWnd, IDC_CHECK_ST_C) == BST_CHECKED) {
+            Registers.status = (Registers.status | 0x01);
+        } else {
+            Registers.status = (Registers.status & 0xFE);
+        }
+        mc_Processor6502.SetRegisters(Registers);
+    }
+    Sleep(10);
+}
+//-Public----------------------------------------------------------------------
+// Name:  SetButtonChecked(HWND hWnd, int Button, int Mode)
+//-----------------------------------------------------------------------------
+void SetButtonChecked(HWND hWnd, int Button, int Mode)
+{
+    if (IsDlgButtonChecked(hWnd, Button) != Mode) {
+        CheckDlgButton(hWnd, Button, Mode);
+    }
+}
+//-Public----------------------------------------------------------------------
 // Name:  AddConsole()
 //-----------------------------------------------------------------------------
 void AddConsole()
@@ -534,6 +668,20 @@ std::wstring ConvertHexUint16ToWstring(uint16_t Value)
     return WStrHexValue;
 }
 //-Public----------------------------------------------------------------------
+// Name:  ConvertHexUint8ToWstring(uint8_t Value)
+//-----------------------------------------------------------------------------
+std::wstring ConvertHexUint8ToWstring(uint8_t Value)
+{
+    char TmpBuffer[255];
+    std::string StrHexValue;
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> convert;
+
+    sprintf_s(TmpBuffer, sizeof(TmpBuffer), "%02X", Value);
+    StrHexValue = TmpBuffer;
+    std::wstring WStrHexValue = convert.from_bytes(StrHexValue);
+    return WStrHexValue;
+}
+//-Public----------------------------------------------------------------------
 // Name:  ConvertHexLPWSTRTouint16(LPWSTR Value)
 //-----------------------------------------------------------------------------
 uint16_t ConvertHexLPWSTRTouint16(LPWSTR Value)
@@ -547,6 +695,23 @@ uint16_t ConvertHexLPWSTRTouint16(LPWSTR Value)
     sscanf_s(StrHexValue.c_str(), "%x", &UintHexValue);
     if (UintHexValue >= 0 && UintHexValue <= 0xFFFF) {
         HexValue = (uint16_t)(UintHexValue);
+    }
+    return HexValue;
+}
+//-Public----------------------------------------------------------------------
+// Name:  ConvertHexLPWSTRTouint8(LPWSTR Value)
+//-----------------------------------------------------------------------------
+uint8_t ConvertHexLPWSTRTouint8(LPWSTR Value)
+{
+    unsigned int UintHexValue = 0;
+    uint8_t HexValue;
+
+    std::wstring Wstr = Value;
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> convert;
+    std::string StrHexValue = convert.to_bytes(Wstr);
+    sscanf_s(StrHexValue.c_str(), "%x", &UintHexValue);
+    if (UintHexValue >= 0 && UintHexValue <= 0xFF) {
+        HexValue = (uint8_t)(UintHexValue);
     }
     return HexValue;
 }

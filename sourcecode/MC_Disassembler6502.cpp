@@ -237,11 +237,11 @@ void MC_Disassembler6502::DisassemblerLine(char* Buffer, size_t BufferSize, uint
     options_t options;
     uint16_t pc;
 
+    options.filename = nullptr;
     options.cycle_counting = 0;
     options.hex_output = 1;
-    options.org = 0xF000;
-    options.max_num_bytes = 65536;
-    options.offset = 0;
+    options.max_num_bytes = 0x10000;
+    options.offset = 0x0000;
     options.org = Address;
     pc = options.org;
     while ((pc <= 0xFFFFu) && ((pc - options.org) < byte_count)) {

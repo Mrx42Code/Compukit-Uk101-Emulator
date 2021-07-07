@@ -57,10 +57,15 @@ LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 void                UpdateMenus(HWND hWnd);
+void                DebugControlPanelSetItems(HWND hWnd);
+void                DebugControlPanelGetItems(HWND hWnd);
+void                SetButtonChecked(HWND hWnd, int Button, int Mode);
 void                AddConsole();
 void                UpdateConsoleTitle();
 std::wstring        ConvertHexUint16ToWstring(uint16_t Value);
+std::wstring        ConvertHexUint8ToWstring(uint8_t Value);
 uint16_t            ConvertHexLPWSTRTouint16(LPWSTR Value);
+uint8_t             ConvertHexLPWSTRTouint8(LPWSTR Value);
  
 //-----------------------------------------------------------------------------
 #endif // EmulatorCompukitUK101_Desktop_H
