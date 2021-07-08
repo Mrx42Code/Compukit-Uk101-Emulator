@@ -41,6 +41,36 @@ using namespace std;
 
 const char StatusBits[8] = { 'C', 'Z' , 'I' , 'D', 'B', '-', 'O', 'N'};
 
+static const uint8_t m_KeyboardOutTable[8] = { 0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xDF, 0xBF, 0x7F };
+
+// chr, row, col, Lshift, Rshift, caplock, ctrl
+static const uint8_t m_KeyboardCodeTable[] = {
+        '1', 7, 7, 0, 0, 0, 0,  '2', 7, 6, 0, 0, 0, 0,  '3', 7, 5, 0, 0, 0, 0,  '4', 7, 4, 0, 0, 0, 0,  '5', 7, 3, 0, 0, 0, 0,  '6', 7, 2, 0, 0, 0, 0,  '7', 7, 1, 0, 0, 0, 0,
+        '!', 7, 7, 0, 1, 0, 0,  '"', 7, 6, 0, 1, 0, 0,  '#', 7, 5, 0, 1, 0, 0,  '$', 7, 4, 0, 1, 0, 0,  '%', 7, 3, 0, 1, 0, 0,  '&', 7, 2, 0, 1, 0, 0, 0x27, 7, 1, 0, 1, 0, 0, // '
+
+        '8', 6, 7, 0, 0, 0, 0,  '9', 6, 6, 0, 0, 0, 0,  '0', 6, 5, 0, 0, 0, 0,  ':', 6, 4, 0, 0, 0, 0,  '-', 6, 3, 0, 0, 0, 0, 0x08, 6, 2, 0, 0, 0, 0, // "Del"
+        '(', 6, 7, 0, 1, 0, 0,  ')', 6, 6, 0, 1, 0, 0,  '*', 6, 4, 0, 1, 0, 0,  '=', 6, 3, 0, 1, 0, 0,  '.', 5, 7, 0, 0, 0, 0,
+
+        'L', 5, 6, 0, 0, 1, 0,  'O', 5, 5, 0, 0, 1, 0, 0x09, 5, 4, 0, 0, 1, 0, 0x0D, 5, 3, 0, 0, 0, 0, // CR
+        'l', 5, 6, 0, 0, 0, 0,  'o', 5, 5, 0, 0, 0, 0,
+        '>', 5, 7, 0, 1, 0, 0, 0x5C, 5, 6, 0, 1, 1, 0, // Backward Slash
+
+        'W', 4, 7, 0, 0, 1, 0,  'E', 4, 6, 0, 0, 1, 0,  'R', 4, 5, 0, 0, 1, 0,  'T', 4, 4, 0, 0, 1, 0,  'Y', 4, 3, 0, 0, 1, 0,  'U', 4, 2, 0, 0, 1, 0,  'I', 4, 1, 0, 0, 1, 0,
+        'w', 4, 7, 0, 0, 0, 0,  'e', 4, 6, 0, 0, 0, 0,  'r', 4, 5, 0, 0, 0, 0,  't', 4, 4, 0, 0, 0, 0,  'y', 4, 3, 0, 0, 0, 0,  'u', 4, 2, 0, 0, 0, 0,  'i', 4, 1, 0, 0, 0, 0,
+
+        'S', 3, 7, 0, 0, 1, 0,  'D', 3, 6, 0, 0, 1, 0,  'F', 3, 5, 0, 0, 1, 0,  'G', 3, 4, 0, 0, 1, 0,  'H', 3, 3, 0, 0, 1, 0,  'J', 3, 2, 0, 0, 1, 0,  'K', 3, 1, 0, 0, 1, 0,
+        's', 3, 7, 0, 0, 0, 0,  'd', 3, 6, 0, 0, 0, 0,  'f', 3, 5, 0, 0, 0, 0,  'g', 3, 4, 0, 0, 0, 0,  'h', 3, 3, 0, 0, 0, 0,  'j', 3, 2, 0, 0, 0, 0,  'k', 3, 1, 0, 0, 0, 0,
+        0x0A, 3, 2, 0, 0, 1, 1, '[', 3, 1, 1, 0, 1, 0,
+
+        'X', 2, 7, 0, 0, 1, 0,  'C', 2, 6, 0, 0, 1, 0,  'V', 2, 5, 0, 0, 1, 0,  'B', 2, 4, 0, 0, 1, 0,  'N', 2, 3, 0, 0, 1, 0,  'M', 2, 2, 0, 0, 1, 0,  ',', 2, 1, 0, 0, 0, 0,
+        'x', 2, 7, 0, 0, 0, 0,  'c', 2, 6, 0, 0, 0, 0,  'v', 2, 5, 0, 0, 0, 0,  'b', 2, 4, 0, 0, 0, 0,  'n', 2, 3, 0, 0, 0, 0,  'm', 2, 2, 0, 0, 0, 0,
+        0x03, 2, 6, 0, 0, 0, 1, ']', 2, 2, 1, 0, 1, 0,  '<', 2, 1, 0, 1, 0, 0,
+
+        'Q', 1, 7, 0, 0, 1, 0,  'A', 1, 6, 0, 0, 1, 0,  'Z', 1, 5, 0, 0, 1, 0,  ' ', 1, 4, 0, 0, 0, 0,  '/', 1, 3, 0, 0, 0, 0,  ';', 1, 2, 0, 0, 0, 0,  'P', 1, 1, 0, 0, 1, 0,
+        'q', 1, 7, 0, 0, 0, 0,  'a', 1, 6, 0, 0, 0, 0,  'z', 1, 5, 0, 0, 0, 0,  'p', 1, 1, 0, 0, 0, 0,  '?', 1, 3, 0, 1, 0, 0,  '+', 1, 2, 0, 1, 0, 0,  '@', 1, 1, 1, 0, 1, 0,
+
+        0x7B, 0, 1, 1, 0, 0, 0,  0x7D, 0, 2, 1, 0, 0, 0
+};
 //-----------------------------------------------------------------------------
 // IMPLEMENT_DYNCREATE
 //-----------------------------------------------------------------------------
@@ -295,14 +325,18 @@ void MC_Hardware6502::CpuCalCyclesPer10thSec()
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::CpuIRQ()
 {
-    //mc_Processor6502.IRQ();
+    if (m_Cpu6502Run) {
+        //mc_Processor6502.IRQ();
+    }
 }
 //-Public----------------------------------------------------------------------
 // Name: CpuNMI()
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::CpuNMI()
 {
-    //mc_Processor6502.NMI();
+    if (m_Cpu6502Run) {
+        //mc_Processor6502.NMI();
+    }
 }
 //-Public----------------------------------------------------------------------
 // Name: CpuReset()
@@ -420,8 +454,6 @@ void MC_Hardware6502::CpuMemoryMapDump(uint16_t StartAddress, uint16_t EndAddres
 void  MC_Hardware6502::CpuLoadFile()
 {
     LoadUartData(FilenameOpenDlg(LOADSAVE_FILE_FILTER, m_App_Hwnd));
-    Sleep(1000);
-    mc_VideoDisplay.Forceupdate();
 }
 //-Public----------------------------------------------------------------------
 // Name: CpuSaveFile()
@@ -429,8 +461,30 @@ void  MC_Hardware6502::CpuLoadFile()
 void   MC_Hardware6502::CpuSaveFile()
 {
     SaveUartData(FilenameSaveDlg(LOADSAVE_FILE_FILTER, m_App_Hwnd));
-    Sleep(1000);
-    mc_VideoDisplay.Forceupdate();
+}
+//-Public----------------------------------------------------------------------
+// Name: CpuMemoryLoadFile()
+//-----------------------------------------------------------------------------
+void   MC_Hardware6502::CpuMemoryLoadFile()
+{
+    MemoryLoadIntelFormat(MemoryMapAddress, MemoryMapEndAddress, FilenameOpenDlg(LOADHEX_FILE_FILTER, m_App_Hwnd));
+}
+//-Public----------------------------------------------------------------------
+// Name: CpuPrintMemoryInfo()
+//-----------------------------------------------------------------------------
+void   MC_Hardware6502::CpuPrintMemoryInfo()
+{
+    printf("Address $%04X-$%04X Size $%04X Read/Write    Ram                                    \r\n", MemoryRamAddress, MemoryRamEndAddress, MemoryRamSizeAddress);
+    printf("Address $%04X-$%04X Size $%04X Read          Ext Rom                    (If Loaded) \r\n", MemoryExtRomAddress, MemoryExtRomEndAddress, MemoryExtRomSizeAddress);
+    printf("Address $%04X-$%04X Size $%04X Read/Write    Parallel Port Controller               \r\n", MemoryParPortAddress, MemoryParPortEndAddress, MemoryParPortSizeAddress);
+    printf("Address $%04X-$%04X Size $%04X Read          Basic5 Rom                 (If Loaded) \r\n", MemoryBasic5RomAddress, MemoryBasic5RomEndAddress, MemoryBasic5RomSizeAddress);
+    printf("Address $%04X-$%04X Size $%04X Read          Disk Rom                   (If Loaded) \r\n", MemoryDiskRomAddress, MemoryDiskRomEndAddress, MemoryDiskRomSizeAddress);
+    printf("Address $%04X-$%04X Size $%04X Read          Basic Roms                             \r\n", MemoryBasicRomAddress, MemoryBasicRomEndAddress, MemoryBasicRomSizeAddress);
+    printf("Address $%04X-$%04X Size $%04X Read/Write    Disk Controller                        \r\n", MemoryDiskAddress, MemoryDiskEndAddress, MemoryDiskSizeAddress);
+    printf("Address $%04X-$%04X Size $%04X Read/Write    Video Ram                              \r\n", MemoryVideoAddress, MemoryVideoEndAddress, MemoryVideoSizeAddress);
+    printf("Address $%04X-$%04X Size $%04X Read/Write    Keyboard                               \r\n", MemoryKeyboardAddress, MemoryKeyboardEndAddress, MemoryKeyboardSizeAddress);
+    printf("Address $%04X-$%04X Size $%04X Read/Write    6850 ACIA Chip                         \r\n", Memory6850Address, Memory6850EndAddress, Memory6850SizeAddress);
+    printf("Address $%04X-$%04X Size $%04X Read          Monitor Rom                            \r\n", MemoryMonitorRomAddress, MemoryMonitorRomEndAddress, MemoryMonitorRomSizeAddress);
 }
 
 

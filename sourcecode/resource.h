@@ -37,6 +37,7 @@
 #define IDC_CHECK_ST_C                  1021
 #define IDM_FILE_SAVE                   32774
 #define IDM_FILE_LOAD                   32775
+#define IDM_FILE_MEMLOAD				32776
 #define IDM_DEBUG_MEMORYDUMP            32777
 #define IDM_DEBUG_CPUDEBUGON            32778
 #define IDM_DEBUG_CPUDEBUGOFF           32779
@@ -55,6 +56,7 @@
 #define IDM_CPUSPEED32                  32794
 #define IDM_CPUSPEEDMAX                 32795
 #define IDM_DEBUG_CPUDEBUGCONTROLPANEL  32796
+#define IDM_CPUINFO						32797
 #define IDC_STATIC                      -1
 
 // Next default values for new objects

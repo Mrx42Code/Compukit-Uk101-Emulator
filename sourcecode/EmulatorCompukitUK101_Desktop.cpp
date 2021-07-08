@@ -137,6 +137,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     case IDM_ABOUT:
                         DialogBox(m_hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
                         break;
+                    case IDM_CPUINFO:
+                        mc_Hardware6502.CpuPrintMemoryInfo();
+                        break;
                     case IDM_DEBUG_CPUDEBUGCONTROLPANEL:
                         //DialogBox(m_hInst, MAKEINTRESOURCE(IDD_DIALOG_DEBUG), hWnd, DebugControlPanel);
                         if (!IsWindow(hwndDlg)) {
@@ -156,6 +159,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         break;
                     case IDM_FILE_SAVE:
                         mc_Hardware6502.CpuSaveFile();
+                        break;
+                    case IDM_FILE_MEMLOAD:
+                        mc_Hardware6502.CpuMemoryLoadFile();
                         break;
                     case IDM_DEBUG_MEMORYDUMP:
                         mc_Hardware6502.CpuMemoryMapDump();
@@ -291,9 +297,9 @@ INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARA
             s_CpuDebugPanel = mc_Hardware6502.m_CpuDebugPanel;
             m_HasSetting = false;
             if (mc_Hardware6502.m_Cpu6502Run) {
-                StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel Cpu Run)"));
+                StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel (Cpu Run)"));
             } else {
-                StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel Cpu Stop)"));
+                StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel (Cpu Stop)"));
             }
             SetWindowText(hDlg, szNewTitle);
             SetWindowText(GetDlgItem(hDlg, IDC_EDIT_DUMPSTARTADDR), ConvertHexUint16ToWstring(mc_Hardware6502.m_CpuDebugPanel.DumpStartAddress).c_str());
@@ -313,6 +319,13 @@ INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARA
                         CheckDlgButton(hDlg, IDC_CHECK_DEBUG, BST_CHECKED);
                     } else {
                         CheckDlgButton(hDlg, IDC_CHECK_DEBUG, BST_UNCHECKED);
+                    }
+                    if (mc_Hardware6502.m_Cpu6502Run) {
+                        EnableWindow(GetDlgItem(hDlg, IDC_BUTTON_RUN), false);
+                        EnableWindow(GetDlgItem(hDlg, IDC_BUTTON_STEP), false);
+                    } else {
+                        EnableWindow(GetDlgItem(hDlg, IDC_BUTTON_RUN), true);
+                        EnableWindow(GetDlgItem(hDlg, IDC_BUTTON_STEP), true);
                     }
                     GetWindowText(GetDlgItem(hDlg, IDC_EDIT_BREAKPOINTADDR), StringValue, 5);
                     mc_Hardware6502.m_CpuDebugPanel.BreakPointAddress = ConvertHexLPWSTRTouint16(StringValue);
@@ -358,7 +371,7 @@ INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARA
                     mc_Hardware6502.m_Cpu6502Run = false;
                     mc_Hardware6502.CpuReset();
                     Sleep(10);
-                    StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel Cpu Reset & Stop)"));
+                    StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel (Cpu Reset & Stop)"));
                     SetWindowText(hDlg, szNewTitle);
                     printf("Cpu Reset & Stop\r\n");
                     DebugControlPanelSetItems(hDlg);
@@ -366,7 +379,7 @@ INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARA
                 case IDC_BUTTON_STOP:
                     mc_Hardware6502.m_Cpu6502Run = false;
                     Sleep(10);
-                    StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel Cpu Stop)"));
+                    StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel (Cpu Stop)"));
                     SetWindowText(hDlg, szNewTitle);
                     printf("Cpu Stop\r\n");
                     DebugControlPanelSetItems(hDlg);
@@ -376,7 +389,7 @@ INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARA
                     printf("Cpu Run\r\n");
                     Sleep(10);
                     mc_Hardware6502.m_Cpu6502Run = true;
-                    StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel Cpu Run)"));
+                    StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel (Cpu Run)"));
                     SetWindowText(hDlg, szNewTitle);
                     break;
                 case IDC_BUTTON_STEP:
@@ -384,7 +397,7 @@ INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARA
                     Sleep(10);
                     DebugControlPanelGetItems(hDlg);
                     mc_Hardware6502.m_Cpu6502Step = true;
-                    StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel Cpu Step)"));
+                    StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel (Cpu Step)"));
                     SetWindowText(hDlg, szNewTitle);
                     DebugControlPanelSetItems(hDlg);
                     break;
