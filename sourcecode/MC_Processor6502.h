@@ -4,6 +4,13 @@
 * Copyright(c) 2017 Gianluca Ghettini											  *
 * https://github.com/gianlucag/mos6502											  *
 *																				  *
+* Disassembler for the 6502 microprocessor										  *
+* Copyright (c) 1998-2014 Tennessee Carmel-Veilleux <veilleux@tentech.ca>         *
+* https://github.com/tcarmelveilleux/dcc6502									  *
+*																				  *
+* Copyright(c) 2021 Mrx42Code                                                     *
+* https://github.com/Mrx42Code/Compukit-Uk101-Emulator  				          *
+*																				  *
 * Permission is hereby granted, free of charge, to any person obtaining a copy    *
 * of this softwareand associated documentation files(the "Software"), to deal	  *
 * in the Software without restriction, including without limitation the rights	  *
@@ -24,7 +31,7 @@
  **********************************************************************************/
 
  //-----------------------------------------------------------------------------
- // MC_Processor6502.h is base on mos6502.h
+ // MC_Processor6502.h is base on mos6502.h & Disassembler dcc6502.h
  //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
@@ -36,10 +43,14 @@
 
 #pragma once
 
+#include "framework.h"
+
 //-----------------------------------------------------------------------------
 // Const
 //-----------------------------------------------------------------------------
 #define CrashDumpSize		32
+#define DebugLineLen		512
+#define DebugSubLineLen		DebugLineLen / 2
 
 #define FLAGNEGATIVE		0x80
 #define FLAGOVERFLOW		0x40
@@ -68,6 +79,14 @@
 #define IF_ZERO() ((m_registers.status & FLAGZERO) ? true : false)
 #define IF_CARRY() ((m_registers.status & FLAGCARRY) ? true : false)
 
+#define SHOW(T,V) do { T x = V; PrintBits(#T, #V, (unsigned char*) &x, sizeof(x)); } while(0)
+
+/* Helper macros for disassemble() function */
+#define HIGH_PART(val) (((val) >> 8) & 0xFFu)
+#define LOW_PART(val) ((val) & 0xFFu)
+#define LOAD_WORD(buffer, current_pc) ((uint16_t)buffer[(current_pc) + 1] | (((uint16_t)buffer[(current_pc) + 2]) << 8))
+
+
 //-----------------------------------------------------------------------------
 // Struct
 //-----------------------------------------------------------------------------
@@ -92,14 +111,31 @@ typedef struct Registers6502
 } _Registers6502;
 
 enum Flags {
-	CarryFlag				= 0,
-	ZeroFlag				= 1,
-	InterruptDisableFlag	= 2,
-	DecimalFlag				= 3,
-	BreakFlag				= 4,
-	UnknownFlag				= 5,
-	OverflowFlag			= 6,
-	NegativeFlag			= 7
+	CarryFlag = 0,
+	ZeroFlag = 1,
+	InterruptDisableFlag = 2,
+	DecimalFlag = 3,
+	BreakFlag = 4,
+	UnknownFlag = 5,
+	OverflowFlag = 6,
+	NegativeFlag = 7
+};
+
+enum {
+	IMMED = 0,                                      /* Immediate */
+	ABSOL,                                          /* Absolute */
+	ZEROP,                                          /* Zero Page */
+	IMPLI,                                          /* Implied */
+	INDIA,                                          /* Indirect Absolute */
+	ABSIX,                                          /* Absolute indexed with X */
+	ABSIY,                                          /* Absolute indexed with Y */
+	ZEPIX,                                          /* Zero page indexed with X */
+	ZEPIY,                                          /* Zero page indexed with Y */
+	INDIN,                                          /* Indexed indirect (with X) */
+	ININD,                                          /* Indirect indexed (with Y) */
+	RELAT,                                          /* Relative */
+	ACCUM,                                          /* Accumulator */
+	ILLEGAL
 };
 
 //-----------------------------------------------------------------------------
@@ -111,54 +147,50 @@ class MC_Processor6502
 
 	public:
 
-		enum CycleMethod	{ INST_COUNT, CYCLE_COUNT };
+		enum class			CycleMethod { INST_COUNT, CYCLE_COUNT };
 
 		typedef void		(MC_Processor6502::* CodeExec)(uint16_t);
 		typedef uint16_t	(MC_Processor6502::* AddrExec)();
 
 		typedef struct Instr {
-			AddrExec		addr;
-			CodeExec		code;
-			uint8_t			cycles;
-			uint8_t			ExCycles;
+			AddrExec		AddrMode;
+			CodeExec		Code;
+			uint8_t			Cycles;
 			bool			CanHaveExCycles;
+			const char*		Mnemonic;
+			uint8_t			AddressingMode;
 		} _Instr;
 
 		typedef struct DebugInfo6502 {
 			uint16_t		pc;
+			Registers6502	Registers;
 			uint8_t			TotalCycles;
 			uint8_t			ExCycles;
 			bool			Updated;
 		} _DebugInfo6502;
 
-		typedef struct CrashInfo6502
-		{
-			Registers6502	Registers;
-			DebugInfo6502	Debug;
-		} _CrashInfo6502;
-
 		typedef struct CrashDump6502
 		{
-			CrashInfo6502   Info[CrashDumpSize];
-			int				Index;
+			DebugInfo6502   Info[CrashDumpSize];
+			uint16_t		Index;
 
 		} _CrashDump6502;
 
-		typedef struct instruction
+		typedef struct Instruction
 		{
 			uint8_t			OpCode;
-			Instr			Instr;
-		} _instruction;
+			Instr			instr;
+		} _Instruction;
 
 		CrashDump6502		m_CrashDump;
 		DebugInfo6502		m_Debug;
 		uint64_t			m_TotalCyclesPerSec;
 
 	protected:
-		Instr				m_InstrTable[256];
-		instruction			m_instruction;
+		Instr				m_InstrTbl[256];
+		Instruction			m_Instruction;
 		Registers6502		m_registers;
-		Cycles6502Info		m_CyclesInfo;
+		Cycles6502Info		m_Clock;
 
 		// IRQ, reset, NMI vectors
 		static const uint16_t s_irqVectorH = 0xFFFF;
@@ -176,7 +208,7 @@ class MC_Processor6502
 
 	private:
 
-		//-----------------------------------------------------------------------------
+	//-----------------------------------------------------------------------------
 
 	public:
 							MC_Processor6502();
@@ -190,9 +222,12 @@ class MC_Processor6502
 		Registers6502		GetRegisters();
 		void				SetRegisters(Registers6502 Registers);
 		bool				RunOneOp();
-		void				RunCode(int32_t cycles, uint64_t& cycleCount, CycleMethod cycleMethod = CYCLE_COUNT);
+		void				RunCode(int32_t cycles, uint64_t& cycleCount, CycleMethod cycleMethod = CycleMethod::CYCLE_COUNT);
+		void				DebugInfo(uint8_t* MemoryMap);
+		void				DebugCrashInfo(uint8_t* MemoryMap);
 
 	protected:
+		void				Initialize();
 		uint8_t				Exec(Instr& instr);
 		// addressing modes
 		uint16_t			Addr_ACC(); // ACCUMULATOR
@@ -273,6 +308,12 @@ class MC_Processor6502
 		// stack operations
 		inline void			StackPush(uint8_t byte);
 		inline uint8_t		StackPop();
+
+		void				Disassemble(char* output, size_t outputsize, uint8_t* buffer, uint16_t* pc);
+		void				PrintByteAsBits(char val);
+		void				PrintBits(const char* ty, const char* val, unsigned char* bytes, size_t num_bytes);
+		void				PrintHexDump16Bit(const char* desc, void* addr, long len, long offset);
+
 	private:
 
 };

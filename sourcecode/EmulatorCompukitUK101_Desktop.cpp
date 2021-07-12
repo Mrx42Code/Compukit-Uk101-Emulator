@@ -26,7 +26,6 @@
 //-----------------------------------------------------------------------------
 // File: EmulatorCompukitUK101_Desktop.cpp: Defines the entry point for the application.
 //-----------------------------------------------------------------------------
-#include "framework.h"
 #include "EmulatorCompukitUK101_Desktop.h"
 #include "MC_Hardware6502.h"
 #include "MC_Processor6502.h"

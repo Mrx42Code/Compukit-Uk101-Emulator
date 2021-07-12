@@ -26,21 +26,15 @@
 //-----------------------------------------------------------------------------
 // File: MC_Hardware6502.cpp: implementation of the MC_Hardware6502 class.
 //-----------------------------------------------------------------------------
-#include "framework.h"
 #include "MC_Hardware6502.h"
 #include "MC_Processor6502.h"
 #include "MC_VideoDisplay.h"
-#include "MC_Disassembler6502.h"
 
 using namespace std;
 
 //*****************************************************************************  
 // Public Code
 //*****************************************************************************
-#define SHOW(T,V) do { T x = V; PrintBits(#T, #V, (unsigned char*) &x, sizeof(x)); } while(0)
-
-const char StatusBits[8] = { 'C', 'Z' , 'I' , 'D', 'B', '-', 'O', 'N'};
-
 static const uint8_t m_KeyboardOutTable[8] = { 0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xDF, 0xBF, 0x7F };
 
 // chr, row, col, Lshift, Rshift, caplock, ctrl
@@ -80,7 +74,6 @@ void CpuMemoryWrite(uint16_t address, uint8_t value);
 MC_Hardware6502 mc_Hardware6502;
 MC_VideoDisplay mc_VideoDisplay;
 MC_Processor6502 mc_Processor6502(CpuMemoryRead, CpuMemoryWrite);
-MC_Disassembler6502 mc_Disassembler6502;
 
 //-----------------------------------------------------------------------------
 // Name: CpuMemoryRead(uint16_t address)
@@ -212,14 +205,8 @@ void MC_Hardware6502::KeyboardMapKey(uint8_t& KeyPress)
                     m_MemoryKeyScan.CpuRow = 0xFF;
                     KeyFound = true;
                     Text[0] = Keycp;
-                    //printf("Text(%s) RowCol(%d,%d) LShift(%d) RShift(%d) Caplock(%d) Ctrl(%d) RowScanCode(%02X) ColScanCode(%02X)\r\n", Text, m_MemoryKeyScan.Row, m_MemoryKeyScan.Col, m_MemoryKeyScan.LShift, m_MemoryKeyScan.RShift, m_MemoryKeyScan.caplock, m_MemoryKeyScan.ctrl, m_MemoryKeyScan.RowScanCode, m_MemoryKeyScan.ColScanCode);
-                } else {
-                    //printf("KeyPress(%02X)\r\n", KeyPress);
                 }
             }
-        }
-        if (KeyPress != m_MemoryKeyScan.Keyin) {
-            //printf("KeyPress(%02X)\r\n", KeyPress);
         }
     }
 }
@@ -300,7 +287,8 @@ void MC_Hardware6502::CpuMemoryMapWrite(uint16_t address, uint8_t value)
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::CpuCalCyclesPer10thSec()
 {
-    double CpuSpeed10th = m_CpuSettings.Speed * CPU6502_CLKREFSPEED;
+    long TotalSpeed = (m_CpuSettings.Speed * CPU6502_CLKREFSPEED);
+    double CpuSpeed10th = double(TotalSpeed);
     m_CpuSettings.CyclesPerSec = (double)(mc_Processor6502.m_TotalCyclesPerSec);
     mc_Processor6502.m_TotalCyclesPerSec = 0;
     if (m_Cpu6502Run && !m_Disassembler6502) {
@@ -317,8 +305,6 @@ void MC_Hardware6502::CpuCalCyclesPer10thSec()
             m_CpuSettings.SpeedUpDn = 0;
         }
     }
-    //printf("m_CpuSettings.Speed = %d m_CpuSettings.SpeedUpDn = %.3f\r\n", m_CpuSettings.Speed, m_CpuSettings.SpeedUpDn);
-    //printf("CyclesPerSec %.3f mhz AvrSpeed %.3f mhz SpeedUpDn %d\r\n", CyclesPerSec / 100000.0, m_CpuSettings.AvrSpeed / 100000.0, m_CpuSettings.SpeedUpDn);
 }
 //-Public----------------------------------------------------------------------
 // Name: CpuIRQ()
@@ -731,11 +717,11 @@ void MC_Hardware6502::MemoryLoad(uint16_t MemoryAddress, uint16_t MemorySize, st
     ifstream file(FileName, ios::in | ios::binary | ios::ate);
     if (file.is_open()) {
         size = file.tellg();
-        memblock = new uint8_t[size];
+        FileSize = (uint32_t)size;
+        memblock = new uint8_t[FileSize];
         file.seekg(0, ios::beg);
         file.read((char*)memblock, size);
         file.close();
-        FileSize = (uint32_t)size;
         if (FileSize <= MemorySize && MemMapMaxSize <= 0x10000) {
             memcpy(&m_MemoryMap[MemoryAddress], memblock, FileSize);
         } else {
@@ -753,7 +739,6 @@ void MC_Hardware6502::MemorySave(uint16_t MemoryAddress, uint16_t MemorySize, st
 {
     streampos size;
     uint8_t* memblock;
-    uint16_t FileSize = 0;
 
     size = MemorySize;
     fstream file(FileName, ios::out | ios::binary | ios::ate);
@@ -1066,70 +1051,6 @@ void MC_Hardware6502::PrintHexDump16Bit(const char* desc, void* addr, long len, 
     printf("-----  ------------------------------------------------\r\n");
 }
 //-Protected-------------------------------------------------------------------
-// Name: :PrintByteAsBits(char val)
-//-----------------------------------------------------------------------------
-void MC_Hardware6502::PrintByteAsBits(char val)
-{
-    for (int i = 7; 0 <= i; i--) {
-        printf("%c", (val & (1 << i)) ? StatusBits[i] : '.');
-//      printf("%c", (val & (1 << i)) ? '1' : '0');
-    }
-}
-//-Protected-------------------------------------------------------------------
-// Name: PrintBits(const char* ty, const char* val, unsigned char* bytes, size_t num_bytes)
-//-----------------------------------------------------------------------------
-void MC_Hardware6502::PrintBits(const char* ty, const char* val, unsigned char* bytes, size_t num_bytes)
-{
-    printf("Status Flags [ ");
-    for (size_t i = 0; i < num_bytes; i++) {
-        PrintByteAsBits(bytes[i]);
-        printf(" ");
-    }
-    printf("]\r\n");
-}
-//-Protected-------------------------------------------------------------------
-// Name: DebugInfo()
-//-----------------------------------------------------------------------------
-void MC_Hardware6502::DebugInfo()
-{
-    char tmpstr[512];
-
-    Registers6502 Registers = mc_Processor6502.GetRegisters();
-    mc_Disassembler6502.DisassemblerLine(tmpstr, sizeof(tmpstr), m_MemoryMap, mc_Processor6502.m_Debug.pc, 1);
-    printf("%s A %02X X %02X Y %02X Cycles %d(%d) SP $%04X ", tmpstr, Registers.A, Registers.X, Registers.Y, mc_Processor6502.m_Debug.TotalCycles, mc_Processor6502.m_Debug.ExCycles, 0x0100 + Registers.sp);
-    SHOW(uint8_t, Registers.status);
-}
-//-Protected-------------------------------------------------------------------
-// Name: DebugCrashInfo()
-//-----------------------------------------------------------------------------
-void MC_Hardware6502::DebugCrashInfo()
-{
-    uint8_t index;
-    char tmpstr[512];
-    Registers6502 Registers;
-
-    PrintHexDump16Bit("Crash Memory Dump $0000-$03FF", &m_MemoryMap, 1024, 0);
-    index = mc_Processor6502.m_CrashDump.Index;
-    index++;
-    if (index >= CrashDumpSize) {
-        index = 0;
-    }
-    printf("\r\nCrash Debug Info\r\n");
-    printf("----------------------------------------------------------\r\n");
-    while (index != mc_Processor6502.m_CrashDump.Index) {
-        if (mc_Processor6502.m_CrashDump.Info[index].Debug.Updated) {
-            Registers = mc_Processor6502.m_CrashDump.Info[index].Registers;
-            mc_Disassembler6502.DisassemblerLine(tmpstr, sizeof(tmpstr), m_MemoryMap, mc_Processor6502.m_CrashDump.Info[index].Debug.pc, 1);
-            printf("%s A %02X X %02X Y %02X Cycles %d(%d) SP $%04X ", tmpstr, Registers.A, Registers.X, Registers.Y, mc_Processor6502.m_CrashDump.Info[index].Debug.TotalCycles, mc_Processor6502.m_CrashDump.Info[index].Debug.ExCycles, 0x0100 + Registers.sp);
-            SHOW(uint8_t, Registers.status);
-        }
-        index++;
-        if (index >= CrashDumpSize) {
-            index = 0;
-        }
-    }
-}
-//-Protected-------------------------------------------------------------------
 // Name: Thread_Create()
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::Thread_Create()
@@ -1183,18 +1104,18 @@ void MC_Hardware6502::Thread_CallBack_Main(int MultiThread_ID)
                 }
                 if (mc_Processor6502.RunOneOp()) {
                     m_Cpu6502Run = false;                                       // Cpu Crash (Stop Cpu + Memory Dump + Debug Info)
-                    DebugCrashInfo();
+                    mc_Processor6502.DebugCrashInfo(m_MemoryMap);
                 } else {
                     if (m_Disassembler6502) {
-                        DebugInfo();
+                        mc_Processor6502.DebugInfo(m_MemoryMap);
                     }
                 }
             } else if(m_Cpu6502Step) {
                 m_Cpu6502Step = false;
                 if (mc_Processor6502.RunOneOp()) {
-                    DebugCrashInfo();
+                    mc_Processor6502.DebugCrashInfo(m_MemoryMap);
                 } else {
-                    DebugInfo();
+                    mc_Processor6502.DebugInfo(m_MemoryMap);
                 }
             }
         }

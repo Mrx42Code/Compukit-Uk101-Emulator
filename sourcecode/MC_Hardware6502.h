@@ -32,6 +32,8 @@
 
 #pragma once
 
+#include "framework.h"
+
 //-----------------------------------------------------------------------------
 // Const
 //-----------------------------------------------------------------------------
@@ -195,14 +197,14 @@ typedef struct KeyInputType
 
 typedef struct CpuThreadType
 {
+    bool				    Running = false;
+    bool				    Quit = false;
     std::thread			    Thread;
-    bool				    Running;
-    bool				    Quit;
 } _CpuThreadType;
 
 typedef struct CpuSpeedSettings
 {
-    uint8_t                 Speed;
+    int                     Speed;
     float                   SpeedUpDn;
     double                  AvrSpeed;
     double                  AvrBigSpeed;
@@ -286,10 +288,6 @@ class MC_Hardware6502
         uint16_t            Hex2Dec(std::string s);
         void                PrintHexDump(const char* desc, void* addr, long len);
         void                PrintHexDump16Bit(const char* desc, void* addr, long len, long offset);
-        void                PrintByteAsBits(char val);
-        void                PrintBits(const char* ty, const char* val, unsigned char* bytes, size_t num_bytes);
-        void                DebugInfo();
-        void                DebugCrashInfo();
 
         void				Thread_Create();
 		void				Thread_Stop();

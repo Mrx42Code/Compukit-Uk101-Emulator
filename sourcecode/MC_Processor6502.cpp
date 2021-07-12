@@ -1,8 +1,16 @@
 /**********************************************************************************
 * MIT License																	  *
 *																				  *
+* mos6502																		  *
 * Copyright(c) 2017 Gianluca Ghettini											  *
 * https://github.com/gianlucag/mos6502											  *
+*																				  *
+* Disassembler for the 6502 microprocessor										  *
+* Copyright (c) 1998-2014 Tennessee Carmel-Veilleux <veilleux@tentech.ca>         *
+* https://github.com/tcarmelveilleux/dcc6502									  *
+*																				  *
+* Copyright(c) 2021 Mrx42Code                                                     *
+* https://github.com/Mrx42Code/Compukit-Uk101-Emulator  				          *
 *																				  *
 * Permission is hereby granted, free of charge, to any person obtaining a copy    *
 * of this softwareand associated documentation files(the "Software"), to deal	  *
@@ -17,20 +25,19 @@
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR	  *
 * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,		  *
 * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE	  *
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER		  *	
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER		  *
 * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,   *
 * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE	  *
 * SOFTWARE.																		  *
  **********************************************************************************/
 
  //-----------------------------------------------------------------------------
- // MC_Processor6502.cpp is base on mos6502.cpp
+ // MC_Processor6502.cpp is base on mos6502.cpp & Disassembler dcc6502.c
  //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
 // File: MC_Processor6502.cpp: implementation of the MC_Processor6502 class.
 //-----------------------------------------------------------------------------
-#include "framework.h"
 #include "MC_Processor6502.h"
 
 using namespace std;
@@ -38,6 +45,7 @@ using namespace std;
 //*****************************************************************************  
 // Public Code
 //*****************************************************************************
+const char StatusBits[8] = { 'C', 'Z' , 'I' , 'D', 'B', '-', 'O', 'N' };
 
 //-----------------------------------------------------------------------------
 // IMPLEMENT_DYNCREATE
@@ -53,15 +61,7 @@ using namespace std;
 //-----------------------------------------------------------------------------
 MC_Processor6502::MC_Processor6502()
 {
-	memset(&m_instruction, 0, sizeof(m_instruction));
-	memset(&m_registers, 0, sizeof(m_registers));
-	memset(&m_CrashDump, 0, sizeof(m_CrashDump));
-	memset(&m_InstrTable, 0, sizeof(m_InstrTable));
-	memset(&m_Debug, 0, sizeof(m_Debug));
-	memset(&m_CyclesInfo, 0, sizeof(m_CyclesInfo));
-	MemoryRead = nullptr;
-	MemoryWrite = nullptr;
-	m_TotalCyclesPerSec = 0;
+	Initialize();
 }
 //-Public----------------------------------------------------------------------
 // Name: mos6502(BusRead r, BusWrite w)
@@ -69,841 +69,166 @@ MC_Processor6502::MC_Processor6502()
 //-----------------------------------------------------------------------------
 MC_Processor6502::MC_Processor6502(BusRead r, BusWrite w)
 {
-	Instr instr;
-
-	memset(&m_instruction, 0, sizeof(m_instruction));
-	memset(&m_registers, 0, sizeof(m_registers));
-	memset(&m_CrashDump, 0, sizeof(m_CrashDump));
-	memset(&m_InstrTable, 0, sizeof(m_InstrTable));
-	memset(&m_Debug, 0, sizeof(m_Debug));
-	memset(&m_CyclesInfo, 0, sizeof(m_CyclesInfo));
-	memset(&instr, 0, sizeof(instr));
-	MemoryRead = nullptr;
-	MemoryWrite = nullptr;
-	m_TotalCyclesPerSec = 0;
+	Initialize();
 	MemoryWrite = (BusWrite)w;
 	MemoryRead = (BusRead)r;
 	// fill jump table with ILLEGALs
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_ILLEGAL;
-	instr.cycles = 0;
-	instr.ExCycles = 0;
-	instr.CanHaveExCycles = false;
 	for (int i = 0; i < 256; i++) {
-		m_InstrTable[i] = instr;
+		//				{ AddrMode , Code , Cycles, ExCycles, CanHaveExCycles , Mnemonic, AddressingMode };
+		m_InstrTbl[i] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_ILLEGAL, 0	, false, nullptr, ILLEGAL };
 	}
 	// insert opcodes
-	instr.addr = &MC_Processor6502::Addr_IMM;
-	instr.code = &MC_Processor6502::Op_ADC;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x69] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_ADC;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x6D] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZER;
-	instr.code = &MC_Processor6502::Op_ADC;
-	instr.cycles = 3;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x65] = instr;
-	instr.addr = &MC_Processor6502::Addr_INX;
-	instr.code = &MC_Processor6502::Op_ADC;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x61] = instr;
-	instr.addr = &MC_Processor6502::Addr_INY;
-	instr.code = &MC_Processor6502::Op_ADC;
-	instr.cycles = 5;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0x71] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZEX;
-	instr.code = &MC_Processor6502::Op_ADC;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x75] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABX;
-	instr.code = &MC_Processor6502::Op_ADC;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0x7D] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABY;
-	instr.code = &MC_Processor6502::Op_ADC;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0x79] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMM;
-	instr.code = &MC_Processor6502::Op_AND;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x29] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_AND;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x2D] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZER;
-	instr.code = &MC_Processor6502::Op_AND;
-	instr.cycles = 3;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x25] = instr;
-	instr.addr = &MC_Processor6502::Addr_INX;
-	instr.code = &MC_Processor6502::Op_AND;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x21] = instr;
-	instr.addr = &MC_Processor6502::Addr_INY;
-	instr.code = &MC_Processor6502::Op_AND;
-	instr.cycles = 5;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0x31] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZEX;
-	instr.code = &MC_Processor6502::Op_AND;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x35] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABX;
-	instr.code = &MC_Processor6502::Op_AND;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0x3D] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABY;
-	instr.code = &MC_Processor6502::Op_AND;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0x39] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_ASL;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x0E] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZER;
-	instr.code = &MC_Processor6502::Op_ASL;
-	instr.cycles = 5;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x06] = instr;
-	instr.addr = &MC_Processor6502::Addr_ACC;
-	instr.code = &MC_Processor6502::Op_ASL_ACC;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x0A] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZEX;
-	instr.code = &MC_Processor6502::Op_ASL;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x16] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABX;
-	instr.code = &MC_Processor6502::Op_ASL;
-	instr.cycles = 7;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x1E] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_REL;
-	instr.code = &MC_Processor6502::Op_BCC;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0x90] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_REL;
-	instr.code = &MC_Processor6502::Op_BCS;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0xB0] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_REL;
-	instr.code = &MC_Processor6502::Op_BEQ;
-	instr.cycles = 2; 
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0xF0] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_BIT;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x2C] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZER;
-	instr.code = &MC_Processor6502::Op_BIT;
-	instr.cycles = 3;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x24] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_REL;
-	instr.code = &MC_Processor6502::Op_BMI;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0x30] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_REL;
-	instr.code = &MC_Processor6502::Op_BNE;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0xD0] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_REL;
-	instr.code = &MC_Processor6502::Op_BPL;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0x10] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_BRK;
-	instr.cycles = 7;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x00] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_REL;
-	instr.code = &MC_Processor6502::Op_BVC;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0x50] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_REL;
-	instr.code = &MC_Processor6502::Op_BVS;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0x70] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_CLC;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x18] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_CLD;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xD8] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_CLI;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x58] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_CLV;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xB8] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMM;
-	instr.code = &MC_Processor6502::Op_CMP;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xC9] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_CMP;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xCD] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZER;
-	instr.code = &MC_Processor6502::Op_CMP;
-	instr.cycles = 3;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xC5] = instr;
-	instr.addr = &MC_Processor6502::Addr_INX;
-	instr.code = &MC_Processor6502::Op_CMP;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xC1] = instr;
-	instr.addr = &MC_Processor6502::Addr_INY;
-	instr.code = &MC_Processor6502::Op_CMP;
-	instr.cycles = 3;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0xD1] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZEX;
-	instr.code = &MC_Processor6502::Op_CMP;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xD5] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABX;
-	instr.code = &MC_Processor6502::Op_CMP;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0xDD] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABY;
-	instr.code = &MC_Processor6502::Op_CMP;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0xD9] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMM;
-	instr.code = &MC_Processor6502::Op_CPX;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xE0] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_CPX;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xEC] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZER;
-	instr.code = &MC_Processor6502::Op_CPX;
-	instr.cycles = 3;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xE4] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMM;
-	instr.code = &MC_Processor6502::Op_CPY;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xC0] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_CPY;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xCC] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZER;
-	instr.code = &MC_Processor6502::Op_CPY;
-	instr.cycles = 3;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xC4] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_DEC;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xCE] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZER;
-	instr.code = &MC_Processor6502::Op_DEC;
-	instr.cycles = 5;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xC6] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZEX;
-	instr.code = &MC_Processor6502::Op_DEC;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xD6] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABX;
-	instr.code = &MC_Processor6502::Op_DEC;
-	instr.cycles = 7;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xDE] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_DEX;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xCA] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_DEY;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x88] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMM;
-	instr.code = &MC_Processor6502::Op_EOR;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x49] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_EOR;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x4D] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZER;
-	instr.code = &MC_Processor6502::Op_EOR;
-	instr.cycles = 3;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x45] = instr;
-	instr.addr = &MC_Processor6502::Addr_INX;
-	instr.code = &MC_Processor6502::Op_EOR;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x41] = instr;
-	instr.addr = &MC_Processor6502::Addr_INY;
-	instr.code = &MC_Processor6502::Op_EOR;
-	instr.cycles = 5;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0x51] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZEX;
-	instr.code = &MC_Processor6502::Op_EOR;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x55] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABX;
-	instr.code = &MC_Processor6502::Op_EOR;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0x5D] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABY;
-	instr.code = &MC_Processor6502::Op_EOR;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0x59] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_INC;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xEE] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZER;
-	instr.code = &MC_Processor6502::Op_INC;
-	instr.cycles = 5;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xE6] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZEX;
-	instr.code = &MC_Processor6502::Op_INC;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xF6] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABX;
-	instr.code = &MC_Processor6502::Op_INC;
-	instr.cycles = 7;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xFE] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_INX;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xE8] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_INY;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xC8] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_JMP;
-	instr.cycles = 3;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x4C] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABI;
-	instr.code = &MC_Processor6502::Op_JMP;
-	instr.cycles = 5;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x6C] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_JSR;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x20] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMM;
-	instr.code = &MC_Processor6502::Op_LDA;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xA9] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_LDA;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xAD] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZER;
-	instr.code = &MC_Processor6502::Op_LDA;
-	instr.cycles = 3;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xA5] = instr;
-	instr.addr = &MC_Processor6502::Addr_INX;
-	instr.code = &MC_Processor6502::Op_LDA;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xA1] = instr;
-	instr.addr = &MC_Processor6502::Addr_INY;
-	instr.code = &MC_Processor6502::Op_LDA;
-	instr.cycles = 5;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0xB1] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZEX;
-	instr.code = &MC_Processor6502::Op_LDA;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xB5] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABX;
-	instr.code = &MC_Processor6502::Op_LDA;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0xBD] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABY;
-	instr.code = &MC_Processor6502::Op_LDA;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0xB9] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMM;
-	instr.code = &MC_Processor6502::Op_LDX;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xA2] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_LDX;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xAE] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZER;
-	instr.code = &MC_Processor6502::Op_LDX;
-	instr.cycles = 3;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xA6] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABY;
-	instr.code = &MC_Processor6502::Op_LDX;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0xBE] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZEY;
-	instr.code = &MC_Processor6502::Op_LDX;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xB6] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMM;
-	instr.code = &MC_Processor6502::Op_LDY;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xA0] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_LDY;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xAC] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZER;
-	instr.code = &MC_Processor6502::Op_LDY;
-	instr.cycles = 3;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xA4] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZEX;
-	instr.code = &MC_Processor6502::Op_LDY;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xB4] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABX;
-	instr.code = &MC_Processor6502::Op_LDY;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0xBC] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_LSR;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x4E] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZER;
-	instr.code = &MC_Processor6502::Op_LSR;
-	instr.cycles = 5;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x46] = instr;
-	instr.addr = &MC_Processor6502::Addr_ACC;
-	instr.code = &MC_Processor6502::Op_LSR_ACC;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x4A] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZEX;
-	instr.code = &MC_Processor6502::Op_LSR;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x56] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABX;
-	instr.code = &MC_Processor6502::Op_LSR;
-	instr.cycles = 7;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x5E] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_NOP;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xEA] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMM;
-	instr.code = &MC_Processor6502::Op_ORA;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x09] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_ORA;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x0D] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZER;
-	instr.code = &MC_Processor6502::Op_ORA;
-	instr.cycles = 3;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x05] = instr;
-	instr.addr = &MC_Processor6502::Addr_INX;
-	instr.code = &MC_Processor6502::Op_ORA;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x01] = instr;
-	instr.addr = &MC_Processor6502::Addr_INY;
-	instr.code = &MC_Processor6502::Op_ORA;
-	instr.cycles = 5;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0x11] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZEX;
-	instr.code = &MC_Processor6502::Op_ORA;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x15] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABX;
-	instr.code = &MC_Processor6502::Op_ORA;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0x1D] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABY;
-	instr.code = &MC_Processor6502::Op_ORA;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0x19] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_PHA;
-	instr.cycles = 3;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x48] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_PHP;
-	instr.cycles = 3;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x08] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_PLA;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x68] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_PLP;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x28] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_ROL;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x2E] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZER;
-	instr.code = &MC_Processor6502::Op_ROL;
-	instr.cycles = 5;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x26] = instr;
-	instr.addr = &MC_Processor6502::Addr_ACC;
-	instr.code = &MC_Processor6502::Op_ROL_ACC;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x2A] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZEX;
-	instr.code = &MC_Processor6502::Op_ROL;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x36] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABX;
-	instr.code = &MC_Processor6502::Op_ROL;
-	instr.cycles = 7;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x3E] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_ROR;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x6E] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZER;
-	instr.code = &MC_Processor6502::Op_ROR;
-	instr.cycles = 5;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x66] = instr;
-	instr.addr = &MC_Processor6502::Addr_ACC;
-	instr.code = &MC_Processor6502::Op_ROR_ACC;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x6A] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZEX;
-	instr.code = &MC_Processor6502::Op_ROR;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x76] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABX;
-	instr.code = &MC_Processor6502::Op_ROR;
-	instr.cycles = 7;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x7E] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_RTI;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x40] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_RTS;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x60] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMM;
-	instr.code = &MC_Processor6502::Op_SBC;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xE9] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_SBC;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xED] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZER;
-	instr.code = &MC_Processor6502::Op_SBC;
-	instr.cycles = 3;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xE5] = instr;
-	instr.addr = &MC_Processor6502::Addr_INX;
-	instr.code = &MC_Processor6502::Op_SBC;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xE1] = instr;
-	instr.addr = &MC_Processor6502::Addr_INY;
-	instr.code = &MC_Processor6502::Op_SBC;
-	instr.cycles = 5;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0xF1] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZEX;
-	instr.code = &MC_Processor6502::Op_SBC;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xF5] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABX;
-	instr.code = &MC_Processor6502::Op_SBC;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0xFD] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABY;
-	instr.code = &MC_Processor6502::Op_SBC;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = true;
-	m_InstrTable[0xF9] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_SEC;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x38] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_SED;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xF8] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_SEI;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x78] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_STA;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x8D] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZER;
-	instr.code = &MC_Processor6502::Op_STA;
-	instr.cycles = 3;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x85] = instr;
-	instr.addr = &MC_Processor6502::Addr_INX;
-	instr.code = &MC_Processor6502::Op_STA;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x81] = instr;
-	instr.addr = &MC_Processor6502::Addr_INY;
-	instr.code = &MC_Processor6502::Op_STA;
-	instr.cycles = 6;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x91] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZEX;
-	instr.code = &MC_Processor6502::Op_STA;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x95] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABX;
-	instr.code = &MC_Processor6502::Op_STA;
-	instr.cycles = 5;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x9D] = instr;
-	instr.addr = &MC_Processor6502::Addr_ABY;
-	instr.code = &MC_Processor6502::Op_STA;
-	instr.cycles = 5;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x99] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_STX;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x8E] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZER;
-	instr.code = &MC_Processor6502::Op_STX;
-	instr.cycles = 3;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x86] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZEY;
-	instr.code = &MC_Processor6502::Op_STX;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x96] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_ABS;
-	instr.code = &MC_Processor6502::Op_STY;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x8C] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZER;
-	instr.code = &MC_Processor6502::Op_STY;
-	instr.cycles = 3;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x84] = instr;
-	instr.addr = &MC_Processor6502::Addr_ZEX;
-	instr.code = &MC_Processor6502::Op_STY;
-	instr.cycles = 4;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x94] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_TAX;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xAA] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_TAY;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xA8] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_TSX;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0xBA] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_TXA;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x8A] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_TXS;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x9A] = instr;
-
-	instr.addr = &MC_Processor6502::Addr_IMP;
-	instr.code = &MC_Processor6502::Op_TYA;
-	instr.cycles = 2;
-	instr.CanHaveExCycles = false;
-	m_InstrTable[0x98] = instr;
-
+	m_InstrTbl[0x69] = { &MC_Processor6502::Addr_IMM, &MC_Processor6502::Op_ADC, 2, false , "ADC", IMMED };
+	m_InstrTbl[0x6D] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_ADC, 4, false , "ADC", ABSOL };
+	m_InstrTbl[0x65] = { &MC_Processor6502::Addr_ZER, &MC_Processor6502::Op_ADC, 3, false , "ADC", ZEROP };
+	m_InstrTbl[0x61] = { &MC_Processor6502::Addr_INX, &MC_Processor6502::Op_ADC, 6, false , "ADC", INDIN };
+	m_InstrTbl[0x71] = { &MC_Processor6502::Addr_INY, &MC_Processor6502::Op_ADC, 5, true  , "ADC", ININD };
+	m_InstrTbl[0x75] = { &MC_Processor6502::Addr_ZEX, &MC_Processor6502::Op_ADC, 4, false , "ADC", ZEPIX };
+	m_InstrTbl[0x7D] = { &MC_Processor6502::Addr_ABX, &MC_Processor6502::Op_ADC, 4, true  , "ADC", ABSIX };
+	m_InstrTbl[0x79] = { &MC_Processor6502::Addr_ABY, &MC_Processor6502::Op_ADC, 4, true  , "ADC", ABSIY };
+	m_InstrTbl[0x29] = { &MC_Processor6502::Addr_IMM, &MC_Processor6502::Op_AND, 2, false , "AND", IMMED };
+	m_InstrTbl[0x2D] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_AND, 4, false , "AND", ABSOL };
+	m_InstrTbl[0x25] = { &MC_Processor6502::Addr_ZER, &MC_Processor6502::Op_AND, 3, false , "AND", ZEROP };
+	m_InstrTbl[0x21] = { &MC_Processor6502::Addr_INX, &MC_Processor6502::Op_AND, 6, false , "AND", INDIN };
+	m_InstrTbl[0x31] = { &MC_Processor6502::Addr_INY, &MC_Processor6502::Op_AND, 5, true  , "AND", ININD };
+	m_InstrTbl[0x35] = { &MC_Processor6502::Addr_ZEX, &MC_Processor6502::Op_AND, 4, false , "AND", ZEPIX };
+	m_InstrTbl[0x3D] = { &MC_Processor6502::Addr_ABX, &MC_Processor6502::Op_AND, 4, true  , "AND", ABSIX };
+	m_InstrTbl[0x39] = { &MC_Processor6502::Addr_ABY, &MC_Processor6502::Op_AND, 4, true  , "AND", ABSIY };
+	m_InstrTbl[0x0E] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_ASL, 6, false , "ASL", ABSOL };
+	m_InstrTbl[0x06] = { &MC_Processor6502::Addr_ZER, &MC_Processor6502::Op_ASL, 5, false , "ASL", ZEROP };
+	m_InstrTbl[0x0A] = { &MC_Processor6502::Addr_ACC, &MC_Processor6502::Op_ASL_ACC, 2, false , "ASL", ACCUM };
+	m_InstrTbl[0x16] = { &MC_Processor6502::Addr_ZEX, &MC_Processor6502::Op_ASL, 6, false , "ASL", ZEPIX };
+	m_InstrTbl[0x1E] = { &MC_Processor6502::Addr_ABX, &MC_Processor6502::Op_ASL, 7, false , "ASL", ABSIX };
+	m_InstrTbl[0x90] = { &MC_Processor6502::Addr_REL, &MC_Processor6502::Op_BCC, 2, true  , "BCC", RELAT };
+	m_InstrTbl[0xB0] = { &MC_Processor6502::Addr_REL, &MC_Processor6502::Op_BCS, 2, true  , "BCS", RELAT };
+	m_InstrTbl[0xF0] = { &MC_Processor6502::Addr_REL, &MC_Processor6502::Op_BEQ, 2, true  , "BEQ", RELAT };
+	m_InstrTbl[0x2C] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_BIT, 4, false , "BIT", ABSOL };
+	m_InstrTbl[0x24] = { &MC_Processor6502::Addr_ZER, &MC_Processor6502::Op_BIT, 3, false , "BIT", ZEROP };
+	m_InstrTbl[0x30] = { &MC_Processor6502::Addr_REL, &MC_Processor6502::Op_BMI, 2, true  , "BMI", RELAT };
+	m_InstrTbl[0xD0] = { &MC_Processor6502::Addr_REL, &MC_Processor6502::Op_BNE, 2, true  , "BNE", RELAT };
+	m_InstrTbl[0x10] = { &MC_Processor6502::Addr_REL, &MC_Processor6502::Op_BPL, 2, true  , "BPL", RELAT };
+	m_InstrTbl[0x00] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_BRK, 7, false , "BRK", IMPLI };
+	m_InstrTbl[0x50] = { &MC_Processor6502::Addr_REL, &MC_Processor6502::Op_BVC, 2, true  , "BVC", RELAT };
+	m_InstrTbl[0x70] = { &MC_Processor6502::Addr_REL, &MC_Processor6502::Op_BVS, 2, true  , "BVS", RELAT };
+	m_InstrTbl[0x18] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_CLC, 2, false , "CLC", IMPLI };
+	m_InstrTbl[0xD8] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_CLD, 2, false , "CLD", IMPLI };
+	m_InstrTbl[0x58] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_CLI, 2, false , "CLI", IMPLI };
+	m_InstrTbl[0xB8] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_CLV, 2, false , "CLV", IMPLI };
+	m_InstrTbl[0xC9] = { &MC_Processor6502::Addr_IMM, &MC_Processor6502::Op_CMP, 2, false , "CMP", IMMED };
+	m_InstrTbl[0xCD] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_CMP, 4, false , "CMP", ABSOL };
+	m_InstrTbl[0xC5] = { &MC_Processor6502::Addr_ZER, &MC_Processor6502::Op_CMP, 3, false , "CMP", ZEROP };
+	m_InstrTbl[0xC1] = { &MC_Processor6502::Addr_INX, &MC_Processor6502::Op_CMP, 6, false , "CMP", INDIN };
+	m_InstrTbl[0xD1] = { &MC_Processor6502::Addr_INY, &MC_Processor6502::Op_CMP, 3, true  , "CMP", ININD };
+	m_InstrTbl[0xD5] = { &MC_Processor6502::Addr_ZEX, &MC_Processor6502::Op_CMP, 4, false , "CMP", ZEPIX };
+	m_InstrTbl[0xDD] = { &MC_Processor6502::Addr_ABX, &MC_Processor6502::Op_CMP, 4, true  , "CMP", ABSIX };
+	m_InstrTbl[0xD9] = { &MC_Processor6502::Addr_ABY, &MC_Processor6502::Op_CMP, 4, true  , "CMP", ABSIY };
+	m_InstrTbl[0xE0] = { &MC_Processor6502::Addr_IMM, &MC_Processor6502::Op_CPX, 2, false , "CPX", IMMED };
+	m_InstrTbl[0xEC] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_CPX, 4, false , "CPX", ABSOL };
+	m_InstrTbl[0xE4] = { &MC_Processor6502::Addr_ZER, &MC_Processor6502::Op_CPX, 3, false , "CPX", ZEROP };
+	m_InstrTbl[0xC0] = { &MC_Processor6502::Addr_IMM, &MC_Processor6502::Op_CPY, 2, false , "CPY", IMMED };
+	m_InstrTbl[0xCC] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_CPY, 4, false , "CPY", ABSOL };
+	m_InstrTbl[0xC4] = { &MC_Processor6502::Addr_ZER, &MC_Processor6502::Op_CPY, 3, false , "CPY", ZEROP };
+	m_InstrTbl[0xCE] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_DEC, 6, false , "DEC", ABSOL };
+	m_InstrTbl[0xC6] = { &MC_Processor6502::Addr_ZER, &MC_Processor6502::Op_DEC, 5, false , "DEC", ZEROP };
+	m_InstrTbl[0xD6] = { &MC_Processor6502::Addr_ZEX, &MC_Processor6502::Op_DEC, 6, false , "DEC", ZEPIX };
+	m_InstrTbl[0xDE] = { &MC_Processor6502::Addr_ABX, &MC_Processor6502::Op_DEC, 7, false , "DEC", ABSIX };
+	m_InstrTbl[0xCA] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_DEX, 2, false , "DEX", IMPLI };
+	m_InstrTbl[0x88] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_DEY, 2, false , "DEY", IMPLI };
+	m_InstrTbl[0x49] = { &MC_Processor6502::Addr_IMM, &MC_Processor6502::Op_EOR, 2, false , "EOR", IMMED };
+	m_InstrTbl[0x4D] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_EOR, 4, false , "EOR", ABSOL };
+	m_InstrTbl[0x45] = { &MC_Processor6502::Addr_ZER, &MC_Processor6502::Op_EOR, 3, false , "EOR", ZEROP };
+	m_InstrTbl[0x41] = { &MC_Processor6502::Addr_INX, &MC_Processor6502::Op_EOR, 6, false , "EOR", INDIN };
+	m_InstrTbl[0x51] = { &MC_Processor6502::Addr_INY, &MC_Processor6502::Op_EOR, 5, true  , "EOR", ININD };
+	m_InstrTbl[0x55] = { &MC_Processor6502::Addr_ZEX, &MC_Processor6502::Op_EOR, 4, false , "EOR", ZEPIX };
+	m_InstrTbl[0x5D] = { &MC_Processor6502::Addr_ABX, &MC_Processor6502::Op_EOR, 4, true  , "EOR", ABSIX };
+	m_InstrTbl[0x59] = { &MC_Processor6502::Addr_ABY, &MC_Processor6502::Op_EOR, 4, true  , "EOR", ABSIY };
+	m_InstrTbl[0xEE] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_INC, 6, false , "INC", ABSOL };
+	m_InstrTbl[0xE6] = { &MC_Processor6502::Addr_ZER, &MC_Processor6502::Op_INC, 5, false , "INC", ZEROP };
+	m_InstrTbl[0xF6] = { &MC_Processor6502::Addr_ZEX, &MC_Processor6502::Op_INC, 6, false , "INC", ZEPIX };
+	m_InstrTbl[0xFE] = { &MC_Processor6502::Addr_ABX, &MC_Processor6502::Op_INC, 7, false , "INC", ABSIX };
+	m_InstrTbl[0xE8] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_INX, 2, false , "INX", IMPLI };
+	m_InstrTbl[0xC8] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_INY, 2, false , "INY", IMPLI };
+	m_InstrTbl[0x4C] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_JMP, 3, false , "JMP", ABSOL };
+	m_InstrTbl[0x6C] = { &MC_Processor6502::Addr_ABI, &MC_Processor6502::Op_JMP, 5, false , "JMP", INDIA };
+	m_InstrTbl[0x20] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_JSR, 6, false , "JSR", ABSOL };
+	m_InstrTbl[0xA9] = { &MC_Processor6502::Addr_IMM, &MC_Processor6502::Op_LDA, 2, false , "LDA", IMMED };
+	m_InstrTbl[0xAD] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_LDA, 4, false , "LDA", ABSOL };
+	m_InstrTbl[0xA5] = { &MC_Processor6502::Addr_ZER, &MC_Processor6502::Op_LDA, 3, false , "LDA", ZEROP };
+	m_InstrTbl[0xA1] = { &MC_Processor6502::Addr_INX, &MC_Processor6502::Op_LDA, 6, false , "LDA", INDIN };
+	m_InstrTbl[0xB1] = { &MC_Processor6502::Addr_INY, &MC_Processor6502::Op_LDA, 5, true  , "LDA", ININD };
+	m_InstrTbl[0xB5] = { &MC_Processor6502::Addr_ZEX, &MC_Processor6502::Op_LDA, 4, false , "LDA", ZEPIX };
+	m_InstrTbl[0xBD] = { &MC_Processor6502::Addr_ABX, &MC_Processor6502::Op_LDA, 4, true  , "LDA", ABSIX };
+	m_InstrTbl[0xB9] = { &MC_Processor6502::Addr_ABY, &MC_Processor6502::Op_LDA, 4, true  , "LDA", ABSIY };
+	m_InstrTbl[0xA2] = { &MC_Processor6502::Addr_IMM, &MC_Processor6502::Op_LDX, 2, false , "LDX", IMMED };
+	m_InstrTbl[0xAE] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_LDX, 4, false , "LDX", ABSOL };
+	m_InstrTbl[0xA6] = { &MC_Processor6502::Addr_ZER, &MC_Processor6502::Op_LDX, 3, false , "LDX", ZEROP };
+	m_InstrTbl[0xBE] = { &MC_Processor6502::Addr_ABY, &MC_Processor6502::Op_LDX, 4, true  , "LDX", ABSIY };
+	m_InstrTbl[0xB6] = { &MC_Processor6502::Addr_ZEY, &MC_Processor6502::Op_LDX, 4, false , "LDX", ZEPIY };
+	m_InstrTbl[0xA0] = { &MC_Processor6502::Addr_IMM, &MC_Processor6502::Op_LDY, 2, false , "LDY", IMMED };
+	m_InstrTbl[0xAC] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_LDY, 4, false , "LDY", ABSOL };
+	m_InstrTbl[0xA4] = { &MC_Processor6502::Addr_ZER, &MC_Processor6502::Op_LDY, 3, false , "LDY", ZEROP };
+	m_InstrTbl[0xB4] = { &MC_Processor6502::Addr_ZEX, &MC_Processor6502::Op_LDY, 4, false , "LDY", ZEPIX };
+	m_InstrTbl[0xBC] = { &MC_Processor6502::Addr_ABX, &MC_Processor6502::Op_LDY, 4, true  , "LDY", ABSIX };
+	m_InstrTbl[0x4E] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_LSR, 6, false , "LSR", ABSOL };
+	m_InstrTbl[0x46] = { &MC_Processor6502::Addr_ZER, &MC_Processor6502::Op_LSR, 5, false , "LSR", ZEROP };
+	m_InstrTbl[0x4A] = { &MC_Processor6502::Addr_ACC, &MC_Processor6502::Op_LSR_ACC, 2, false , "LSR", ACCUM };
+	m_InstrTbl[0x56] = { &MC_Processor6502::Addr_ZEX, &MC_Processor6502::Op_LSR, 6, false , "LSR", ZEPIX };
+	m_InstrTbl[0x5E] = { &MC_Processor6502::Addr_ABX, &MC_Processor6502::Op_LSR, 7, false , "LSR", ABSIX };
+	m_InstrTbl[0xEA] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_NOP, 2, false , "NOP", IMPLI };
+	m_InstrTbl[0x09] = { &MC_Processor6502::Addr_IMM, &MC_Processor6502::Op_ORA, 2, false , "ORA", IMMED };
+	m_InstrTbl[0x0D] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_ORA, 4, false , "ORA", ABSOL };
+	m_InstrTbl[0x05] = { &MC_Processor6502::Addr_ZER, &MC_Processor6502::Op_ORA, 3, false , "ORA", ZEROP };
+	m_InstrTbl[0x01] = { &MC_Processor6502::Addr_INX, &MC_Processor6502::Op_ORA, 6, false , "ORA", INDIN };
+	m_InstrTbl[0x11] = { &MC_Processor6502::Addr_INY, &MC_Processor6502::Op_ORA, 5, true  , "ORA", ININD };
+	m_InstrTbl[0x15] = { &MC_Processor6502::Addr_ZEX, &MC_Processor6502::Op_ORA, 4, false , "ORA", ZEPIX };
+	m_InstrTbl[0x1D] = { &MC_Processor6502::Addr_ABX, &MC_Processor6502::Op_ORA, 4, true  , "ORA", ABSIX };
+	m_InstrTbl[0x19] = { &MC_Processor6502::Addr_ABY, &MC_Processor6502::Op_ORA, 4, true  , "ORA", ABSIY };
+	m_InstrTbl[0x48] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_PHA, 3, false , "PHA", IMPLI };
+	m_InstrTbl[0x08] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_PHP, 3, false , "PHP", IMPLI };
+	m_InstrTbl[0x68] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_PLA, 4, false , "PLA", IMPLI };
+	m_InstrTbl[0x28] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_PLP, 4, false , "PLP", IMPLI };
+	m_InstrTbl[0x2E] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_ROL, 6, false , "ROL", ABSOL };
+	m_InstrTbl[0x26] = { &MC_Processor6502::Addr_ZER, &MC_Processor6502::Op_ROL, 5, false , "ROL", ZEROP };
+	m_InstrTbl[0x2A] = { &MC_Processor6502::Addr_ACC, &MC_Processor6502::Op_ROL_ACC, 2, false , "ROL", ACCUM };
+	m_InstrTbl[0x36] = { &MC_Processor6502::Addr_ZEX, &MC_Processor6502::Op_ROL, 6, false , "ROL", ZEPIX };
+	m_InstrTbl[0x3E] = { &MC_Processor6502::Addr_ABX, &MC_Processor6502::Op_ROL, 7, false , "ROL", ABSIX };
+	m_InstrTbl[0x6E] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_ROR, 6, false , "ROR", ABSOL };
+	m_InstrTbl[0x66] = { &MC_Processor6502::Addr_ZER, &MC_Processor6502::Op_ROR, 5, false , "ROR", ZEROP };
+	m_InstrTbl[0x6A] = { &MC_Processor6502::Addr_ACC, &MC_Processor6502::Op_ROR_ACC, 2, false , "ROR", ACCUM };
+	m_InstrTbl[0x76] = { &MC_Processor6502::Addr_ZEX, &MC_Processor6502::Op_ROR, 6, false , "ROR", ZEPIX };
+	m_InstrTbl[0x7E] = { &MC_Processor6502::Addr_ABX, &MC_Processor6502::Op_ROR, 7, false , "ROR", ABSIX };
+	m_InstrTbl[0x40] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_RTI, 6, false , "RTI", IMPLI };
+	m_InstrTbl[0x60] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_RTS, 6, false , "RTS", IMPLI };
+	m_InstrTbl[0xE9] = { &MC_Processor6502::Addr_IMM, &MC_Processor6502::Op_SBC, 2, false , "SBC", IMMED };
+	m_InstrTbl[0xED] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_SBC, 4, false , "SBC", ABSOL };
+	m_InstrTbl[0xE5] = { &MC_Processor6502::Addr_ZER, &MC_Processor6502::Op_SBC, 3, false , "SBC", ZEROP };
+	m_InstrTbl[0xE1] = { &MC_Processor6502::Addr_INX, &MC_Processor6502::Op_SBC, 6, false , "SBC", INDIN };
+	m_InstrTbl[0xF1] = { &MC_Processor6502::Addr_INY, &MC_Processor6502::Op_SBC, 5, true  , "SBC", ININD };
+	m_InstrTbl[0xF5] = { &MC_Processor6502::Addr_ZEX, &MC_Processor6502::Op_SBC, 4, false , "SBC", ZEPIX };
+	m_InstrTbl[0xFD] = { &MC_Processor6502::Addr_ABX, &MC_Processor6502::Op_SBC, 4, true  , "SBC", ABSIX };
+	m_InstrTbl[0xF9] = { &MC_Processor6502::Addr_ABY, &MC_Processor6502::Op_SBC, 4, true  , "SBC", ABSIY };
+	m_InstrTbl[0x38] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_SEC, 2, false , "SEC", IMPLI };
+	m_InstrTbl[0xF8] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_SED, 2, false , "SED", IMPLI };
+	m_InstrTbl[0x78] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_SEI, 2, false , "SEI", IMPLI };
+	m_InstrTbl[0x8D] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_STA, 4, false , "STA", ABSOL };
+	m_InstrTbl[0x85] = { &MC_Processor6502::Addr_ZER, &MC_Processor6502::Op_STA, 3, false , "STA", ZEROP };
+	m_InstrTbl[0x81] = { &MC_Processor6502::Addr_INX, &MC_Processor6502::Op_STA, 6, false , "STA", INDIN };
+	m_InstrTbl[0x91] = { &MC_Processor6502::Addr_INY, &MC_Processor6502::Op_STA, 6, false , "STA", ININD };
+	m_InstrTbl[0x95] = { &MC_Processor6502::Addr_ZEX, &MC_Processor6502::Op_STA, 4, false , "STA", ZEPIX };
+	m_InstrTbl[0x9D] = { &MC_Processor6502::Addr_ABX, &MC_Processor6502::Op_STA, 5, false , "STA", ABSIX };
+	m_InstrTbl[0x99] = { &MC_Processor6502::Addr_ABY, &MC_Processor6502::Op_STA, 5, false , "STA", ABSIY };
+	m_InstrTbl[0x8E] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_STX, 4, false , "STX", ABSOL };
+	m_InstrTbl[0x86] = { &MC_Processor6502::Addr_ZER, &MC_Processor6502::Op_STX, 3, false , "STX", ZEROP };
+	m_InstrTbl[0x96] = { &MC_Processor6502::Addr_ZEY, &MC_Processor6502::Op_STX, 4, false , "STX", ZEPIY };
+	m_InstrTbl[0x8C] = { &MC_Processor6502::Addr_ABS, &MC_Processor6502::Op_STY, 4, false , "STY", ABSOL };
+	m_InstrTbl[0x84] = { &MC_Processor6502::Addr_ZER, &MC_Processor6502::Op_STY, 3, false , "STY", ZEROP };
+	m_InstrTbl[0x94] = { &MC_Processor6502::Addr_ZEX, &MC_Processor6502::Op_STY, 4, false , "STY", ZEPIX };
+	m_InstrTbl[0xAA] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_TAX, 2, false , "TAX", IMPLI };
+	m_InstrTbl[0xA8] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_TAY, 2, false , "TAY", IMPLI };
+	m_InstrTbl[0xBA] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_TSX, 2, false , "TSX", IMPLI };
+	m_InstrTbl[0x8A] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_TXA, 2, false , "TXA", IMPLI };
+	m_InstrTbl[0x9A] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_TXS, 2, false , "TXS", IMPLI };
+	m_InstrTbl[0x98] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_TYA, 2, false , "TYA", IMPLI };
 	return;
 }
 //-Public----------------------------------------------------------------------
@@ -949,7 +274,7 @@ void MC_Processor6502::Reset()
 {
 	memset(&m_CrashDump, 0, sizeof(m_CrashDump));
 	memset(&m_Debug, 0, sizeof(m_Debug));
-	memset(&m_instruction, 0, sizeof(m_instruction));
+	memset(&m_Instruction, 0, sizeof(m_Instruction));
 	m_registers.A = 0x00;
 	m_registers.Y = 0x00;
 	m_registers.X = 0x00;
@@ -994,14 +319,14 @@ bool MC_Processor6502::RunOneOp()
 {
 	if (!m_registers.IllegalOpcode) {
 		m_Debug.pc = m_registers.pc;
-		m_instruction.OpCode = MemoryRead(m_registers.pc++);					// fetch
-		m_instruction.Instr = m_InstrTable[m_instruction.OpCode];				// decode
-		m_Debug.TotalCycles = Exec(m_instruction.Instr);						// execute
-		m_Debug.ExCycles = m_CyclesInfo.ExCycles;
+		m_Instruction.OpCode = MemoryRead(m_registers.pc++);					// fetch
+		m_Instruction.instr = m_InstrTbl[m_Instruction.OpCode];				// decode
+		m_Debug.TotalCycles = Exec(m_Instruction.instr);						// execute
+		m_Debug.Registers = m_registers;
+		m_Debug.ExCycles = m_Clock.ExCycles;
 		m_Debug.Updated = true;
 		m_TotalCyclesPerSec += m_Debug.TotalCycles;
-		m_CrashDump.Info[m_CrashDump.Index].Debug = m_Debug;
-		m_CrashDump.Info[m_CrashDump.Index].Registers = m_registers;
+		m_CrashDump.Info[m_CrashDump.Index] = m_Debug;
 		m_CrashDump.Index++;
 		if (m_CrashDump.Index >= CrashDumpSize) {
 			m_CrashDump.Index = 0;
@@ -1019,13 +344,54 @@ void MC_Processor6502::RunCode(int32_t cyclesRemaining, uint64_t& cycleCount, Cy
 	uint8_t Cycle;
 
 	while (cyclesRemaining > 0 && !m_registers.IllegalOpcode) {
-		m_instruction.OpCode = MemoryRead(m_registers.pc++);					// fetch
-		m_instruction.Instr = m_InstrTable[m_instruction.OpCode];				// decode
-		Cycle = Exec(m_instruction.Instr);										// execute
+		m_Instruction.OpCode = MemoryRead(m_registers.pc++);					// fetch
+		m_Instruction.instr = m_InstrTbl[m_Instruction.OpCode];				// decode
+		Cycle = Exec(m_Instruction.instr);										// execute
 		cycleCount += Cycle;
-		cyclesRemaining -= cycleMethod == CYCLE_COUNT ? Cycle : 1;				// cycleMethod == INST_COUNT
+		cyclesRemaining -= cycleMethod == CycleMethod::CYCLE_COUNT ? Cycle : 1;	// cycleMethod == INST_COUNT
 	}
 }
+//-Public----------------------------------------------------------------------
+// Name: DebugInfo(uint8_t * MemoryMap)
+//-----------------------------------------------------------------------------
+void MC_Processor6502::DebugInfo(uint8_t * MemoryMap)
+{
+	char tmpstr[DebugLineLen];
+
+	Disassemble(tmpstr, sizeof(tmpstr), MemoryMap, &m_Debug.pc);
+	printf("%s A %02X X %02X Y %02X Cycles %d(%d) SP $%04X ", tmpstr, m_Debug.Registers.A, m_Debug.Registers.X, m_Debug.Registers.Y, m_Debug.TotalCycles, m_Debug.ExCycles, 0x0100 + m_Debug.Registers.sp);
+	SHOW(uint8_t, m_Debug.Registers.status);
+}
+//-Protected-------------------------------------------------------------------
+// Name: DebugCrashInfo(uint8_t* MemoryMap)
+//-----------------------------------------------------------------------------
+void MC_Processor6502::DebugCrashInfo(uint8_t* MemoryMap)
+{
+	uint16_t index;
+	char tmpstr[DebugLineLen];
+
+	PrintHexDump16Bit("Crash Memory Dump $0000-$03FF", MemoryMap, 1024, 0);
+	index = m_CrashDump.Index;
+	index++;
+	if (index >= CrashDumpSize) {
+		index = 0;
+	}
+	printf("\r\nCrash Debug Info\r\n");
+	printf("----------------------------------------------------------\r\n");
+	while (index != m_CrashDump.Index) {
+		if (m_CrashDump.Info[index].Updated) {
+			Disassemble(tmpstr, sizeof(tmpstr), MemoryMap, &m_CrashDump.Info[index].pc);
+			printf("%s A %02X X %02X Y %02X Cycles %d(%d) SP $%04X ", tmpstr, m_CrashDump.Info[index].Registers.A, m_CrashDump.Info[index].Registers.X, m_CrashDump.Info[index].Registers.Y, m_CrashDump.Info[index].TotalCycles, m_CrashDump.Info[index].ExCycles, 0x0100 + m_CrashDump.Info[index].Registers.sp);
+			SHOW(uint8_t, m_CrashDump.Info[index].Registers.status);
+		}
+		index++;
+		if (index >= CrashDumpSize) {
+			index = 0;
+		}
+	}
+}
+
+
 
 
 
@@ -1042,6 +408,21 @@ void MC_Processor6502::RunCode(int32_t cyclesRemaining, uint64_t& cycleCount, Cy
 // Protected Code
 //*****************************************************************************
 
+//-Protected-------------------------------------------------------------------
+// Name: Initialize()
+//-----------------------------------------------------------------------------
+void MC_Processor6502::Initialize()
+{
+	memset(&m_Instruction, 0, sizeof(m_Instruction));
+	memset(&m_registers, 0, sizeof(m_registers));
+	memset(&m_CrashDump, 0, sizeof(m_CrashDump));
+	memset(&m_InstrTbl, 0, sizeof(m_InstrTbl));
+	memset(&m_Debug, 0, sizeof(m_Debug));
+	memset(&m_Clock, 0, sizeof(m_Clock));
+	MemoryRead = nullptr;
+	MemoryWrite = nullptr;
+	m_TotalCyclesPerSec = 0;
+}
 //-Protected-------------------------------------------------------------------
 // Name: Addr_ACC()
 //-----------------------------------------------------------------------------
@@ -1093,7 +474,7 @@ uint16_t MC_Processor6502::Addr_REL()
 	uint16_t addr;
 
 	offset = (uint16_t)MemoryRead(m_registers.pc++);
-	if (offset & 0x80) 
+	if (offset & 0x80)
 		offset |= 0xFF00;
 
 	addr = m_registers.pc + (int16_t)offset;
@@ -1151,10 +532,10 @@ uint16_t MC_Processor6502::Addr_ABX()
 	addrL = MemoryRead(m_registers.pc++);
 	addrH = MemoryRead(m_registers.pc++);
 	addr = addrL + (addrH << 8) + m_registers.X;
-	if (m_CyclesInfo.CanHaveExCycles) {
+	if (m_Clock.CanHaveExCycles) {
 		bool CrossedPageBoundary = ((addrL + (addrH << 8)) ^ m_registers.X) >> 8;
 		if (CrossedPageBoundary) {
-			m_CyclesInfo.ExCycles++;
+			m_Clock.ExCycles++;
 		}
 	}
 	return addr;
@@ -1171,10 +552,10 @@ uint16_t MC_Processor6502::Addr_ABY()
 	addrL = MemoryRead(m_registers.pc++);
 	addrH = MemoryRead(m_registers.pc++);
 	addr = addrL + (addrH << 8) + m_registers.Y;
-	if (m_CyclesInfo.CanHaveExCycles) {
+	if (m_Clock.CanHaveExCycles) {
 		bool CrossedPageBoundary = ((addrL + (addrH << 8)) ^ m_registers.Y) >> 8;
 		if (CrossedPageBoundary) {
-			m_CyclesInfo.ExCycles++;
+			m_Clock.ExCycles++;
 		}
 	}
 	return addr;
@@ -1205,10 +586,10 @@ uint16_t MC_Processor6502::Addr_INY()
 	zeroL = MemoryRead(m_registers.pc++);
 	zeroH = (zeroL + 1) % 256;
 	addr = MemoryRead(zeroL) + (MemoryRead(zeroH) << 8) + m_registers.Y;
-	if (m_CyclesInfo.CanHaveExCycles) {
+	if (m_Clock.CanHaveExCycles) {
 		bool CrossedPageBoundary = ((MemoryRead(zeroL) + (MemoryRead(zeroH) << 8)) ^ m_registers.Y) >> 8;
 		if (CrossedPageBoundary) {
-			m_CyclesInfo.ExCycles++;
+			m_Clock.ExCycles++;
 		}
 	}
 	return addr;
@@ -1241,17 +622,17 @@ uint8_t MC_Processor6502::StackPop()
 //-----------------------------------------------------------------------------
 uint8_t MC_Processor6502::Exec(Instr& instr)
 {
-	m_CyclesInfo.CanHaveExCycles = instr.CanHaveExCycles;
-	m_CyclesInfo.Cycles = instr.cycles;
-	m_CyclesInfo.ExCycles = 0;
-	uint16_t src = (this->*instr.addr)();
-	(this->*instr.code)(src);
-	if (m_CyclesInfo.CanHaveExCycles) {
-		m_CyclesInfo.TotalCycles = m_CyclesInfo.Cycles + m_CyclesInfo.ExCycles;
+	m_Clock.CanHaveExCycles = instr.CanHaveExCycles;
+	m_Clock.Cycles = instr.Cycles;
+	m_Clock.ExCycles = 0;
+	uint16_t src = (this->*instr.AddrMode)();
+	(this->*instr.Code)(src);
+	if (m_Clock.CanHaveExCycles) {
+		m_Clock.TotalCycles = m_Clock.Cycles + m_Clock.ExCycles;
 	} else {
-		m_CyclesInfo.TotalCycles = m_CyclesInfo.Cycles;
+		m_Clock.TotalCycles = m_Clock.Cycles;
 	}
-	return m_CyclesInfo.TotalCycles;
+	return m_Clock.TotalCycles;
 }
 //-Protected-------------------------------------------------------------------
 // Name: Op_ILLEGAL(uint16_t src)
@@ -1332,13 +713,13 @@ void MC_Processor6502::Op_ASL_ACC(uint16_t src)
 void MC_Processor6502::Op_BCC(uint16_t src)
 {
 	if (!IF_CARRY()) {
-		if (m_CyclesInfo.CanHaveExCycles) {
+		if (m_Clock.CanHaveExCycles) {
 			bool CrossedPageBoundary = (m_registers.pc ^ src) >> 8;
 			if (CrossedPageBoundary) {
-				m_CyclesInfo.ExCycles++;
+				m_Clock.ExCycles++;
 			}
 		}
-		m_CyclesInfo.ExCycles++;
+		m_Clock.ExCycles++;
 		m_registers.pc = src;
 	}
 	return;
@@ -1348,14 +729,14 @@ void MC_Processor6502::Op_BCC(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_BCS(uint16_t src)
 {
-	if (IF_CARRY())	{
-		if (m_CyclesInfo.CanHaveExCycles) {
+	if (IF_CARRY()) {
+		if (m_Clock.CanHaveExCycles) {
 			bool CrossedPageBoundary = (m_registers.pc ^ src) >> 8;
 			if (CrossedPageBoundary) {
-				m_CyclesInfo.ExCycles++;
+				m_Clock.ExCycles++;
 			}
 		}
-		m_CyclesInfo.ExCycles++;
+		m_Clock.ExCycles++;
 		m_registers.pc = src;
 	}
 	return;
@@ -1366,13 +747,13 @@ void MC_Processor6502::Op_BCS(uint16_t src)
 void MC_Processor6502::Op_BEQ(uint16_t src)
 {
 	if (IF_ZERO()) {
-		if (m_CyclesInfo.CanHaveExCycles) {
+		if (m_Clock.CanHaveExCycles) {
 			bool CrossedPageBoundary = (m_registers.pc ^ src) >> 8;
 			if (CrossedPageBoundary) {
-				m_CyclesInfo.ExCycles++;
+				m_Clock.ExCycles++;
 			}
 		}
-		m_CyclesInfo.ExCycles++;
+		m_Clock.ExCycles++;
 		m_registers.pc = src;
 	}
 	return;
@@ -1395,13 +776,13 @@ void MC_Processor6502::Op_BIT(uint16_t src)
 void MC_Processor6502::Op_BMI(uint16_t src)
 {
 	if (IF_NEGATIVE()) {
-		if (m_CyclesInfo.CanHaveExCycles) {
+		if (m_Clock.CanHaveExCycles) {
 			bool CrossedPageBoundary = (m_registers.pc ^ src) >> 8;
 			if (CrossedPageBoundary) {
-				m_CyclesInfo.ExCycles++;
+				m_Clock.ExCycles++;
 			}
 		}
-		m_CyclesInfo.ExCycles++;
+		m_Clock.ExCycles++;
 		m_registers.pc = src;
 	}
 	return;
@@ -1411,14 +792,14 @@ void MC_Processor6502::Op_BMI(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_BNE(uint16_t src)
 {
-	if (!IF_ZERO())	{
-		if (m_CyclesInfo.CanHaveExCycles) {
+	if (!IF_ZERO()) {
+		if (m_Clock.CanHaveExCycles) {
 			bool CrossedPageBoundary = (m_registers.pc ^ src) >> 8;
 			if (CrossedPageBoundary) {
-				m_CyclesInfo.ExCycles++;
+				m_Clock.ExCycles++;
 			}
 		}
-		m_CyclesInfo.ExCycles++;
+		m_Clock.ExCycles++;
 		m_registers.pc = src;
 	}
 	return;
@@ -1428,14 +809,14 @@ void MC_Processor6502::Op_BNE(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_BPL(uint16_t src)
 {
-	if (!IF_NEGATIVE())	{
-		if (m_CyclesInfo.CanHaveExCycles) {
+	if (!IF_NEGATIVE()) {
+		if (m_Clock.CanHaveExCycles) {
 			bool CrossedPageBoundary = (m_registers.pc ^ src) >> 8;
 			if (CrossedPageBoundary) {
-				m_CyclesInfo.ExCycles++;
+				m_Clock.ExCycles++;
 			}
 		}
-		m_CyclesInfo.ExCycles++;
+		m_Clock.ExCycles++;
 		m_registers.pc = src;
 	}
 	return;
@@ -1459,13 +840,13 @@ void MC_Processor6502::Op_BRK(uint16_t src)
 void MC_Processor6502::Op_BVC(uint16_t src)
 {
 	if (!IF_OVERFLOW()) {
-		if (m_CyclesInfo.CanHaveExCycles) {
+		if (m_Clock.CanHaveExCycles) {
 			bool CrossedPageBoundary = (m_registers.pc ^ src) >> 8;
 			if (CrossedPageBoundary) {
-				m_CyclesInfo.ExCycles++;
+				m_Clock.ExCycles++;
 			}
 		}
-		m_CyclesInfo.ExCycles++;
+		m_Clock.ExCycles++;
 		m_registers.pc = src;
 	}
 	return;
@@ -1476,13 +857,13 @@ void MC_Processor6502::Op_BVC(uint16_t src)
 void MC_Processor6502::Op_BVS(uint16_t src)
 {
 	if (IF_OVERFLOW()) {
-		if (m_CyclesInfo.CanHaveExCycles) {
+		if (m_Clock.CanHaveExCycles) {
 			bool CrossedPageBoundary = (m_registers.pc ^ src) >> 8;
 			if (CrossedPageBoundary) {
-				m_CyclesInfo.ExCycles++;
+				m_Clock.ExCycles++;
 			}
 		}
-		m_CyclesInfo.ExCycles++;
+		m_Clock.ExCycles++;
 		m_registers.pc = src;
 	}
 	return;
@@ -1863,7 +1244,7 @@ void MC_Processor6502::Op_SBC(uint16_t src)
 		if (((m_registers.A & 0x0F) - (IF_CARRY() ? 0 : 1)) < (m & 0x0F))
 			tmp -= 6;
 
-		if (tmp > 0x99)	{
+		if (tmp > 0x99) {
 			tmp -= 0x60;
 		}
 	}
@@ -1981,4 +1362,196 @@ void MC_Processor6502::Op_TYA(uint16_t src)
 	SET_ZERO(!m);
 	m_registers.A = m;
 	return;
+}
+//-Protected-------------------------------------------------------------------
+// Name: Disassemble(char *output, size_t outputsize, uint8_t *buffer, uint16_t *pc)
+//-----------------------------------------------------------------------------
+void MC_Processor6502::Disassemble(char* output, size_t outputsize, uint8_t* buffer, uint16_t* pc)
+{
+	char opcode_repr[DebugSubLineLen], hex_dump[DebugSubLineLen];
+	int len = 0;
+	uint8_t entry = 0;
+	bool found = false;
+	uint8_t byte_operand;
+	uint16_t word_operand = 0;
+	uint16_t current_addr = *pc;
+	uint8_t opcode = buffer[current_addr];
+	const char* mnemonic;
+
+	opcode_repr[0] = '\0';
+	hex_dump[0] = '\0';
+	output[0] = '\0';
+	if (m_InstrTbl[opcode].Mnemonic != nullptr && m_InstrTbl[opcode].AddressingMode != ILLEGAL) {
+		found = true;
+		entry = opcode;
+	}
+	if (!found) {
+		sprintf_s(opcode_repr, sizeof(opcode_repr), ".byte $%02X", opcode);
+		sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X ", current_addr, opcode);
+		sprintf_s(output, outputsize, "%-16s%-16s  INVALID OPCODE", hex_dump, opcode_repr);
+		return;
+	}
+	mnemonic = m_InstrTbl[entry].Mnemonic;
+	sprintf_s(hex_dump, sizeof(hex_dump), "$%04X", current_addr);
+	switch (m_InstrTbl[entry].AddressingMode) {
+		case IMMED:
+			byte_operand = buffer[*pc + 1];
+			*pc += 1;
+			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s #$%02X", mnemonic, byte_operand);
+			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+			break;
+		case ABSOL:
+			word_operand = LOAD_WORD(buffer, *pc);
+			*pc += 2;
+			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s $%02X%02X", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
+			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
+			break;
+		case ZEROP:
+			byte_operand = buffer[*pc + 1];
+			*pc += 1;
+			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s $%02X", mnemonic, byte_operand);
+			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+			break;
+		case IMPLI:
+			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s", mnemonic);
+			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X ", current_addr, opcode);
+			break;
+		case INDIA:
+			word_operand = LOAD_WORD(buffer, *pc);
+			*pc += 2;
+			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s ($%02X%02X)", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
+			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
+			break;
+		case ABSIX:
+			word_operand = LOAD_WORD(buffer, *pc);
+			*pc += 2;
+			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s $%02X%02X,X", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
+			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
+			break;
+		case ABSIY:
+			word_operand = LOAD_WORD(buffer, *pc);
+			*pc += 2;
+			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s $%02X%02X,Y", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
+			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
+			break;
+		case ZEPIX:
+			byte_operand = buffer[*pc + 1];
+			*pc += 1;
+			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s $%02X,X", mnemonic, byte_operand);
+			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+			break;
+		case ZEPIY:
+			byte_operand = buffer[*pc + 1];
+			*pc += 1;
+			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s $%02X,Y", mnemonic, byte_operand);
+			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+			break;
+		case INDIN:
+			byte_operand = buffer[*pc + 1];
+			*pc += 1;
+			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s ($%02X,X)", mnemonic, byte_operand);
+			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+			break;
+		case ININD:
+			byte_operand = buffer[*pc + 1];
+			*pc += 1;
+			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s ($%02X),Y", mnemonic, byte_operand);
+			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+			break;
+		case RELAT:
+			byte_operand = buffer[*pc + 1];
+			*pc += 1;
+			word_operand = current_addr + 2;
+			if (byte_operand > 0x7Fu) {
+				word_operand -= ((~byte_operand & 0x7Fu) + 1);
+			} else {
+				word_operand += byte_operand & 0x7Fu;
+			}
+			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s $%04X", mnemonic, word_operand);
+			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+			break;
+		case ACCUM:
+			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s A", mnemonic);
+			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X ", current_addr, opcode);
+			break;
+		default:
+			// Will not happen since each entry in opcode_table has address mode set
+			break;
+	}
+	len = sprintf_s(output, outputsize, "%-16s%-16s ", hex_dump, opcode_repr);
+	output += len;
+}
+//-Protected-------------------------------------------------------------------
+// Name: :PrintByteAsBits(char val)
+//-----------------------------------------------------------------------------
+void MC_Processor6502::PrintByteAsBits(char val)
+{
+	for (int i = 7; 0 <= i; i--) {
+		printf("%c", (val & (1 << i)) ? StatusBits[i] : '.');
+	}
+}
+//-Protected-------------------------------------------------------------------
+// Name: PrintBits(const char* ty, const char* val, unsigned char* bytes, size_t num_bytes)
+//-----------------------------------------------------------------------------
+void MC_Processor6502::PrintBits(const char* ty, const char* val, unsigned char* bytes, size_t num_bytes)
+{
+	printf("Status Flags [ ");
+	for (size_t i = 0; i < num_bytes; i++) {
+		PrintByteAsBits(bytes[i]);
+		printf(" ");
+	}
+	printf("]\r\n");
+}
+//-Protected-------------------------------------------------------------------
+// Name: PrintHexDump16Bit(const char* desc, void* addr, long len, long offset)
+//-----------------------------------------------------------------------------
+void MC_Processor6502::PrintHexDump16Bit(const char* desc, void* addr, long len, long offset)
+{
+	long i;
+	uint8_t* pc = (uint8_t*)addr;
+	char buff[20];
+	uint8_t Data;
+
+	if (desc != NULL) {
+		printf("\n%s:\r\n", desc);
+	}
+	if (len == 0) {
+		printf("\nZERO LENGTH\r\n");
+		return;
+	} else if (len < 0) {
+		printf("\nNEGATIVE LENGTH: %ld\r\n", len);
+		return;
+	}
+	printf("Addr:  00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F\r\n");
+	printf("-----  ------------------------------------------------\r\n");
+	for (i = 0; i < len; i++) {
+		if ((i % 16) == 0) {
+			if (i != 0) {
+				printf("  | %s |\r\n", buff);
+			}
+			printf("$%04lX ", i + offset);
+		}
+		Data = pc[i];
+		if ((i % 16) == 8)
+			printf("  %02X", Data);
+		else
+			printf(" %02X", Data);
+
+		if ((Data < 0x20) || (Data > 0x7e))
+			buff[i % 16] = '.';
+		else
+			buff[i % 16] = Data;
+
+		buff[(i % 16) + 1] = '\0';
+	}
+	while ((i % 16) != 0) {
+		if ((i % 16) == 8)
+			printf("    ");
+		else
+			printf("   ");
+
+		i++;
+	}
+	printf("  | %s |\r\n", buff);
+	printf("-----  ------------------------------------------------\r\n");
 }
