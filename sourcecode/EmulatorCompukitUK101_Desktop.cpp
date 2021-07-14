@@ -28,7 +28,6 @@
 //-----------------------------------------------------------------------------
 #include "EmulatorCompukitUK101_Desktop.h"
 #include "MC_Hardware6502.h"
-#include "MC_Processor6502.h"
 
 using namespace std;
 
@@ -46,7 +45,6 @@ WCHAR m_szWindowClass[MAX_LOADSTRING];                                          
 bool  m_HasSetting = false;
 
 extern MC_Hardware6502 mc_Hardware6502;
-extern MC_Processor6502 mc_Processor6502;
 
 //-----------------------------------------------------------------------------
 // message handlers
@@ -59,17 +57,20 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 {
     MSG msg;
 
+    AddConsole();
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
     LoadStringW(hInstance, IDS_APP_TITLE, m_szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_EMULATORCOMPUKITUK101DESKTOP, m_szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
-    mc_Hardware6502.Initialize();
-    AddConsole();
     if (!InitInstance (hInstance, nCmdShow)) {
+        mc_Hardware6502.PrintStatus(true, "MainApp Create");
         return FALSE;
+    } else {
+        mc_Hardware6502.PrintStatus(false, "MainApp Create");
     }
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_EMULATORCOMPUKITUK101DESKTOP));
+    mc_Hardware6502.Initialize();
     mc_Hardware6502.Create();
     while (GetMessage(&msg, nullptr, 0, 0)) {
         if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) {
@@ -78,6 +79,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
         }
     }
     mc_Hardware6502.Destroy();
+    mc_Hardware6502.PrintStatus(false, "App Ends");
+    Sleep(1000);
     return (int) msg.wParam;
 }
 //-Public----------------------------------------------------------------------
@@ -147,10 +150,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         }
                         break;
                     case IDM_EXIT:
-                        KillTimer(hWnd, IDT_TIMERCyclesPerSec);
-                        KillTimer(hWnd, IDT_TIMERIrq);
-                        KillTimer(hWnd, IDT_TIMERNmi);
-                        mc_Hardware6502.Destroy();
                         DestroyWindow(hWnd);
                         break;
                     case IDM_FILE_LOAD:
@@ -172,27 +171,27 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         mc_Hardware6502.m_Disassembler6502 = false;
                         break;
                     case IDM_DEBUG_CPURUN:
-                        mc_Hardware6502.m_Cpu6502Run = true;
+                        mc_Hardware6502.CpuRun();
                         break;
                     case IDM_DEBUG_CPUSTOP:
-                        mc_Hardware6502.m_Cpu6502Run = false;
+                        mc_Hardware6502.CpuStop();
                         break;
                     case IDM_RESET_JUSTRESETCPU:
                         mc_Hardware6502.CpuReset();
                         break;
                     case IDM_RESET_INITIALIZEANDRESETCPU:
-                        mc_Hardware6502.CpuInitializeAndReset();
                         system("cls");
+                        mc_Hardware6502.CpuInitializeAndReset();
                         break;
                     case IDM_ROMS_BASICCOMPUKITUK101:
+                        system("cls");
                         mc_Hardware6502.m_BasicSelectUk101OrOsi = false;
                         mc_Hardware6502.CpuInitializeAndReset();
-                        system("cls");
                         break;
                     case IDM_ROMS_BASICOSI600:
+                        system("cls");
                         mc_Hardware6502.m_BasicSelectUk101OrOsi = true;
                         mc_Hardware6502.CpuInitializeAndReset();
-                        system("cls");
                         break;
                     case IDM_CPUSPEED1:
                         mc_Hardware6502.m_CpuSettings.Speed = 1;
@@ -235,7 +234,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             KillTimer(hWnd, IDT_TIMERCyclesPerSec);
             KillTimer(hWnd, IDT_TIMERIrq);
             KillTimer(hWnd, IDT_TIMERNmi);
-            mc_Hardware6502.Destroy();
             PostQuitMessage(0);
             break;
         case WM_CHAR:
@@ -367,27 +365,24 @@ INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARA
                     }
                     break;
                 case IDC_BUTTON_RESET:
-                    mc_Hardware6502.m_Cpu6502Run = false;
+                    mc_Hardware6502.CpuStop();
                     mc_Hardware6502.CpuReset();
                     Sleep(10);
                     StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel (Cpu Reset & Stop)"));
                     SetWindowText(hDlg, szNewTitle);
-                    printf("Cpu Reset & Stop\r\n");
                     DebugControlPanelSetItems(hDlg);
                     break;
                 case IDC_BUTTON_STOP:
-                    mc_Hardware6502.m_Cpu6502Run = false;
+                    mc_Hardware6502.CpuStop();
                     Sleep(10);
                     StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel (Cpu Stop)"));
                     SetWindowText(hDlg, szNewTitle);
-                    printf("Cpu Stop\r\n");
                     DebugControlPanelSetItems(hDlg);
                     break;
                 case IDC_BUTTON_RUN:
                     DebugControlPanelGetItems(hDlg);
-                    printf("Cpu Run\r\n");
                     Sleep(10);
-                    mc_Hardware6502.m_Cpu6502Run = true;
+                    mc_Hardware6502.CpuRun();
                     StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel (Cpu Run)"));
                     SetWindowText(hDlg, szNewTitle);
                     break;
@@ -395,7 +390,7 @@ INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARA
                     mc_Hardware6502.m_Cpu6502Run = false;
                     Sleep(10);
                     DebugControlPanelGetItems(hDlg);
-                    mc_Hardware6502.m_Cpu6502Step = true;
+                    mc_Hardware6502.CpuStep();
                     StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel (Cpu Step)"));
                     SetWindowText(hDlg, szNewTitle);
                     DebugControlPanelSetItems(hDlg);
@@ -496,47 +491,47 @@ void UpdateMenus(HWND hWnd)
 void DebugControlPanelSetItems(HWND hWnd)
 {
     Sleep(10);
-    Registers6502 Registers = mc_Processor6502.GetRegisters();
+    Registers6502 Registers = mc_Hardware6502.mcp_Processor6502->GetRegisters();
     SetWindowText(GetDlgItem(hWnd, IDC_EDIT_PC), ConvertHexUint16ToWstring(Registers.pc).c_str());
     SetWindowText(GetDlgItem(hWnd, IDC_EDIT_A), ConvertHexUint8ToWstring(Registers.A).c_str());
     SetWindowText(GetDlgItem(hWnd, IDC_EDIT_X), ConvertHexUint8ToWstring(Registers.X).c_str());
     SetWindowText(GetDlgItem(hWnd, IDC_EDIT_Y), ConvertHexUint8ToWstring(Registers.Y).c_str());
-    if (Registers.status & 0x80) {
+    if (Registers.status & FLAGNEGATIVE) {
         SetButtonChecked(hWnd, IDC_CHECK_ST_N, BST_CHECKED);
     } else {
         SetButtonChecked(hWnd, IDC_CHECK_ST_N, BST_UNCHECKED);
     }
-    if (Registers.status & 0x40) {
+    if (Registers.status & FLAGOVERFLOW) {
         SetButtonChecked(hWnd, IDC_CHECK_ST_O, BST_CHECKED);
     } else {
         SetButtonChecked(hWnd, IDC_CHECK_ST_O, BST_UNCHECKED);
     }
-    if (Registers.status & 0x20) {
+    if (Registers.status & FLAGCONSTANT) {
         SetButtonChecked(hWnd, IDC_CHECK_ST_NU, BST_CHECKED);
     } else {
         SetButtonChecked(hWnd, IDC_CHECK_ST_NU, BST_UNCHECKED);
     }
-    if (Registers.status & 0x10) {
+    if (Registers.status & FLAGBREAK) {
         SetButtonChecked(hWnd, IDC_CHECK_ST_B, BST_CHECKED);
     } else {
         SetButtonChecked(hWnd, IDC_CHECK_ST_B, BST_UNCHECKED);
     }
-    if (Registers.status & 0x08) {
+    if (Registers.status & FLAGDECIMAL) {
         SetButtonChecked(hWnd, IDC_CHECK_ST_D, BST_CHECKED);
     } else {
         SetButtonChecked(hWnd, IDC_CHECK_ST_D, BST_UNCHECKED);
     }
-    if (Registers.status & 0x04) {
+    if (Registers.status & FLAGINTERRUPT) {
         SetButtonChecked(hWnd, IDC_CHECK_ST_I, BST_CHECKED);
     } else {
         SetButtonChecked(hWnd, IDC_CHECK_ST_I, BST_UNCHECKED);
     }
-    if (Registers.status & 0x02) {
+    if (Registers.status & FLAGZERO) {
         SetButtonChecked(hWnd, IDC_CHECK_ST_Z, BST_CHECKED);
     } else {
         SetButtonChecked(hWnd, IDC_CHECK_ST_Z, BST_UNCHECKED);
     }
-    if (Registers.status & 0x01) {
+    if (Registers.status & FLAGCARRY) {
         SetButtonChecked(hWnd, IDC_CHECK_ST_C, BST_CHECKED);
     } else {
         SetButtonChecked(hWnd, IDC_CHECK_ST_C, BST_UNCHECKED);
@@ -553,7 +548,7 @@ void DebugControlPanelGetItems(HWND hWnd)
     
     Sleep(10);
     if (m_HasSetting) {
-        Registers6502 Registers = mc_Processor6502.GetRegisters();
+        Registers6502 Registers = mc_Hardware6502.mcp_Processor6502->GetRegisters();
         GetWindowText(GetDlgItem(hWnd, IDC_EDIT_PC), StringValue, 5);
         Registers.pc = ConvertHexLPWSTRTouint16(StringValue);
         GetWindowText(GetDlgItem(hWnd, IDC_EDIT_A), StringValue, 3);
@@ -563,46 +558,46 @@ void DebugControlPanelGetItems(HWND hWnd)
         GetWindowText(GetDlgItem(hWnd, IDC_EDIT_Y), StringValue, 3);
         Registers.Y = ConvertHexLPWSTRTouint8(StringValue);
         if (IsDlgButtonChecked(hWnd, IDC_CHECK_ST_N) == BST_CHECKED) {
-            Registers.status = (Registers.status | 0x80);
+            Registers.status |= FLAGNEGATIVE;
         } else {
-            Registers.status = (Registers.status & 0x7F);
+            Registers.status &= (~FLAGNEGATIVE);
         }
         if (IsDlgButtonChecked(hWnd, IDC_CHECK_ST_O) == BST_CHECKED) {
-            Registers.status = (Registers.status | 0x40);
+            Registers.status |= FLAGOVERFLOW;
         } else {
-            Registers.status = (Registers.status & 0xBF);
+            Registers.status &= (~FLAGOVERFLOW);
         }
         if (IsDlgButtonChecked(hWnd, IDC_CHECK_ST_NU) == BST_CHECKED) {
-            Registers.status = (Registers.status | 0x20);
+            Registers.status |= FLAGCONSTANT;
         } else {
-            Registers.status = (Registers.status & 0xDF);
+            Registers.status &= (~FLAGCONSTANT);
         }
         if (IsDlgButtonChecked(hWnd, IDC_CHECK_ST_B) == BST_CHECKED) {
-            Registers.status = (Registers.status | 0x10);
+            Registers.status |= FLAGBREAK;
         } else {
-            Registers.status = (Registers.status & 0xEF);
+            Registers.status &= (~FLAGBREAK);
         }
         if (IsDlgButtonChecked(hWnd, IDC_CHECK_ST_D) == BST_CHECKED) {
-            Registers.status = (Registers.status | 0x08);
+            Registers.status |= FLAGDECIMAL;
         } else {
-            Registers.status = (Registers.status & 0xF7);
+            Registers.status &= (~FLAGDECIMAL);
         }
         if (IsDlgButtonChecked(hWnd, IDC_CHECK_ST_I) == BST_CHECKED) {
-            Registers.status = (Registers.status | 0x04);
+            Registers.status |= FLAGINTERRUPT;
         } else {
-            Registers.status = (Registers.status & 0xFB);
+            Registers.status &= (~FLAGINTERRUPT);
         }
         if (IsDlgButtonChecked(hWnd, IDC_CHECK_ST_Z) == BST_CHECKED) {
-            Registers.status = (Registers.status | 0x02);
+            Registers.status |= FLAGZERO;
         } else {
-            Registers.status = (Registers.status & 0xFD);
+            Registers.status &= (~FLAGZERO);
         }
         if (IsDlgButtonChecked(hWnd, IDC_CHECK_ST_C) == BST_CHECKED) {
-            Registers.status = (Registers.status | 0x01);
+           Registers.status |= FLAGCARRY;
         } else {
-            Registers.status = (Registers.status & 0xFE);
+            Registers.status &= (~FLAGCARRY);
         }
-        mc_Processor6502.SetRegisters(Registers);
+        mc_Hardware6502.mcp_Processor6502->SetRegisters(Registers);
     }
     Sleep(10);
 }
@@ -618,12 +613,12 @@ void SetButtonChecked(HWND hWnd, int Button, int Mode)
 //-Public----------------------------------------------------------------------
 // Name:  AddConsole()
 //-----------------------------------------------------------------------------
-void AddConsole()
+bool AddConsole()
 {
     HANDLE hConsole = nullptr;
 
     if (AllocConsole() == 0) {
-        return;                                                                 // Handle error here. Use ::GetLastError() to get the error.
+        return true;                                                                 // Handle error here. Use ::GetLastError() to get the error.
     }
     hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
@@ -640,6 +635,8 @@ void AddConsole()
     std::wcout.clear();
     std::wcerr.clear();
     std::wcin.clear();
+    mc_Hardware6502.PrintStatus(false, "Console Create");
+    return false;
 }
 //-Public----------------------------------------------------------------------
 // Name:  UpdateConsoleTitle()

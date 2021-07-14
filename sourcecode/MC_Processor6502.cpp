@@ -74,7 +74,7 @@ MC_Processor6502::MC_Processor6502(BusRead r, BusWrite w)
 	MemoryRead = (BusRead)r;
 	// fill jump table with ILLEGALs
 	for (int i = 0; i < 256; i++) {
-		//				{ AddrMode , Code , Cycles, ExCycles, CanHaveExCycles , Mnemonic, AddressingMode };
+		//				{ AddrMode , Code , Cycles, CanHaveExCycles , Mnemonic, AddressingMode };
 		m_InstrTbl[i] = { &MC_Processor6502::Addr_IMP, &MC_Processor6502::Op_ILLEGAL, 0	, false, nullptr, ILLEGAL };
 	}
 	// insert opcodes
@@ -280,6 +280,7 @@ void MC_Processor6502::Reset()
 	m_registers.X = 0x00;
 	m_registers.pc = (MemoryRead(s_rstVectorH) << 8) + MemoryRead(s_rstVectorL);	// load PC from reset vector
 	m_registers.sp = 0xFD;
+	m_registers.status = 0x00;
 	m_registers.status |= FLAGCONSTANT;
 	m_registers.IllegalOpcode = false;
 	return;
@@ -359,7 +360,7 @@ void MC_Processor6502::DebugInfo(uint8_t * MemoryMap)
 	char tmpstr[DebugLineLen];
 
 	Disassemble(tmpstr, sizeof(tmpstr), MemoryMap, &m_Debug.pc);
-	printf("%s A %02X X %02X Y %02X Cycles %d(%d) SP $%04X ", tmpstr, m_Debug.Registers.A, m_Debug.Registers.X, m_Debug.Registers.Y, m_Debug.TotalCycles, m_Debug.ExCycles, 0x0100 + m_Debug.Registers.sp);
+	printf("%s A=%02X X=%02X Y=%02X SP=$%04X Cycles=%d(%d) ", tmpstr, m_Debug.Registers.A, m_Debug.Registers.X, m_Debug.Registers.Y, 0x0100 + m_Debug.Registers.sp, m_Debug.TotalCycles, m_Debug.ExCycles);
 	SHOW(uint8_t, m_Debug.Registers.status);
 }
 //-Protected-------------------------------------------------------------------
@@ -381,7 +382,7 @@ void MC_Processor6502::DebugCrashInfo(uint8_t* MemoryMap)
 	while (index != m_CrashDump.Index) {
 		if (m_CrashDump.Info[index].Updated) {
 			Disassemble(tmpstr, sizeof(tmpstr), MemoryMap, &m_CrashDump.Info[index].pc);
-			printf("%s A %02X X %02X Y %02X Cycles %d(%d) SP $%04X ", tmpstr, m_CrashDump.Info[index].Registers.A, m_CrashDump.Info[index].Registers.X, m_CrashDump.Info[index].Registers.Y, m_CrashDump.Info[index].TotalCycles, m_CrashDump.Info[index].ExCycles, 0x0100 + m_CrashDump.Info[index].Registers.sp);
+			printf("%s A=%02X X=%02X Y=%02X SP=$%04X Cycles=%d(%d) ", tmpstr, m_CrashDump.Info[index].Registers.A, m_CrashDump.Info[index].Registers.X, m_CrashDump.Info[index].Registers.Y, 0x0100 + m_CrashDump.Info[index].Registers.sp, m_CrashDump.Info[index].TotalCycles, m_CrashDump.Info[index].ExCycles);
 			SHOW(uint8_t, m_CrashDump.Info[index].Registers.status);
 		}
 		index++;
@@ -1371,7 +1372,6 @@ void MC_Processor6502::Disassemble(char* output, size_t outputsize, uint8_t* buf
 	char opcode_repr[DebugSubLineLen], hex_dump[DebugSubLineLen];
 	int len = 0;
 	uint8_t entry = 0;
-	bool found = false;
 	uint8_t byte_operand;
 	uint16_t word_operand = 0;
 	uint16_t current_addr = *pc;
@@ -1382,81 +1382,79 @@ void MC_Processor6502::Disassemble(char* output, size_t outputsize, uint8_t* buf
 	hex_dump[0] = '\0';
 	output[0] = '\0';
 	if (m_InstrTbl[opcode].Mnemonic != nullptr && m_InstrTbl[opcode].AddressingMode != ILLEGAL) {
-		found = true;
 		entry = opcode;
-	}
-	if (!found) {
-		sprintf_s(opcode_repr, sizeof(opcode_repr), ".byte $%02X", opcode);
-		sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X ", current_addr, opcode);
-		sprintf_s(output, outputsize, "%-16s%-16s  INVALID OPCODE", hex_dump, opcode_repr);
+	} else {
+		snprintf(opcode_repr, sizeof(opcode_repr), ".byte $%02X", opcode);
+		snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X ", current_addr, opcode);
+		snprintf(output, outputsize, "%-16s%-16s  INVALID OPCODE", hex_dump, opcode_repr);
 		return;
 	}
 	mnemonic = m_InstrTbl[entry].Mnemonic;
-	sprintf_s(hex_dump, sizeof(hex_dump), "$%04X", current_addr);
+	snprintf(hex_dump, sizeof(hex_dump), "$%04X", current_addr);
 	switch (m_InstrTbl[entry].AddressingMode) {
 		case IMMED:
 			byte_operand = buffer[*pc + 1];
 			*pc += 1;
-			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s #$%02X", mnemonic, byte_operand);
-			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+			snprintf(opcode_repr, sizeof(opcode_repr), "%s #$%02X", mnemonic, byte_operand);
+			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
 			break;
 		case ABSOL:
 			word_operand = LOAD_WORD(buffer, *pc);
 			*pc += 2;
-			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s $%02X%02X", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
-			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
+			snprintf(opcode_repr, sizeof(opcode_repr), "%s $%02X%02X", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
+			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
 			break;
 		case ZEROP:
 			byte_operand = buffer[*pc + 1];
 			*pc += 1;
-			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s $%02X", mnemonic, byte_operand);
-			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+			snprintf(opcode_repr, sizeof(opcode_repr), "%s $%02X", mnemonic, byte_operand);
+			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
 			break;
 		case IMPLI:
-			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s", mnemonic);
-			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X ", current_addr, opcode);
+			snprintf(opcode_repr, sizeof(opcode_repr), "%s", mnemonic);
+			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X ", current_addr, opcode);
 			break;
 		case INDIA:
 			word_operand = LOAD_WORD(buffer, *pc);
 			*pc += 2;
-			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s ($%02X%02X)", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
-			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
+			snprintf(opcode_repr, sizeof(opcode_repr), "%s ($%02X%02X)", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
+			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
 			break;
 		case ABSIX:
 			word_operand = LOAD_WORD(buffer, *pc);
 			*pc += 2;
-			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s $%02X%02X,X", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
-			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
+			snprintf(opcode_repr, sizeof(opcode_repr), "%s $%02X%02X,X", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
+			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
 			break;
 		case ABSIY:
 			word_operand = LOAD_WORD(buffer, *pc);
 			*pc += 2;
-			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s $%02X%02X,Y", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
-			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
+			snprintf(opcode_repr, sizeof(opcode_repr), "%s $%02X%02X,Y", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
+			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
 			break;
 		case ZEPIX:
 			byte_operand = buffer[*pc + 1];
 			*pc += 1;
-			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s $%02X,X", mnemonic, byte_operand);
-			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+			snprintf(opcode_repr, sizeof(opcode_repr), "%s $%02X,X", mnemonic, byte_operand);
+			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
 			break;
 		case ZEPIY:
 			byte_operand = buffer[*pc + 1];
 			*pc += 1;
-			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s $%02X,Y", mnemonic, byte_operand);
-			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+			snprintf(opcode_repr, sizeof(opcode_repr), "%s $%02X,Y", mnemonic, byte_operand);
+			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
 			break;
 		case INDIN:
 			byte_operand = buffer[*pc + 1];
 			*pc += 1;
-			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s ($%02X,X)", mnemonic, byte_operand);
-			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+			snprintf(opcode_repr, sizeof(opcode_repr), "%s ($%02X,X)", mnemonic, byte_operand);
+			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
 			break;
 		case ININD:
 			byte_operand = buffer[*pc + 1];
 			*pc += 1;
-			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s ($%02X),Y", mnemonic, byte_operand);
-			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+			snprintf(opcode_repr, sizeof(opcode_repr), "%s ($%02X),Y", mnemonic, byte_operand);
+			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
 			break;
 		case RELAT:
 			byte_operand = buffer[*pc + 1];
@@ -1467,18 +1465,18 @@ void MC_Processor6502::Disassemble(char* output, size_t outputsize, uint8_t* buf
 			} else {
 				word_operand += byte_operand & 0x7Fu;
 			}
-			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s $%04X", mnemonic, word_operand);
-			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+			snprintf(opcode_repr, sizeof(opcode_repr), "%s $%04X", mnemonic, word_operand);
+			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
 			break;
 		case ACCUM:
-			sprintf_s(opcode_repr, sizeof(opcode_repr), "%s A", mnemonic);
-			sprintf_s(hex_dump, sizeof(hex_dump), "$%04X  %02X ", current_addr, opcode);
+			snprintf(opcode_repr, sizeof(opcode_repr), "%s A", mnemonic);
+			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X ", current_addr, opcode);
 			break;
 		default:
 			// Will not happen since each entry in opcode_table has address mode set
 			break;
 	}
-	len = sprintf_s(output, outputsize, "%-16s%-16s ", hex_dump, opcode_repr);
+	len = snprintf(output, outputsize, "%-16s%-16s ", hex_dump, opcode_repr);
 	output += len;
 }
 //-Protected-------------------------------------------------------------------
@@ -1495,7 +1493,7 @@ void MC_Processor6502::PrintByteAsBits(char val)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::PrintBits(const char* ty, const char* val, unsigned char* bytes, size_t num_bytes)
 {
-	printf("Status Flags [ ");
+	printf("StatusFlags [ ");
 	for (size_t i = 0; i < num_bytes; i++) {
 		PrintByteAsBits(bytes[i]);
 		printf(" ");

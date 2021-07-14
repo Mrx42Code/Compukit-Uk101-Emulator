@@ -33,6 +33,7 @@
 #pragma once
 
 #include "framework.h"
+#include "MC_Processor6502.h"
 
 //-----------------------------------------------------------------------------
 // Const
@@ -222,15 +223,17 @@ typedef struct CpuDebugPanel {
 // Name: class MC_Hardware6502
 // Desc: Application class
 //-----------------------------------------------------------------------------
-class MC_Hardware6502
+class MC_Hardware6502 
 {
 
 	public:
+        HANDLE              m_hConsole;
+        MC_Processor6502*   mcp_Processor6502;
         CpuSpeedSettings    m_CpuSettings;
         bool                m_BasicSelectUk101OrOsi;
-        bool                m_Disassembler6502;
         bool                m_Cpu6502Run;
         bool                m_Cpu6502Step;
+        bool                m_Disassembler6502;
         uint8_t             m_MemoryMap[MemoryMapSizeAddress];
         bool                m_MemoryWriteOverride;
         HWND                m_App_Hwnd;
@@ -254,12 +257,16 @@ class MC_Hardware6502
 		void				Create();
         void                ReSizeDisplay();
         void                KeyboardMapKey(uint8_t& KeyPress);
+        void                PrintStatus(bool Error, std::string Msg);
 
-        void                CpuCalCyclesPer10thSec();
         void                CpuIRQ();
         void                CpuNMI();
         void                CpuReset();
+        void                CpuStop();
+        void                CpuRun();
+        void                CpuStep();
         void                CpuInitializeAndReset();
+        void                CpuCalCyclesPer10thSec();
         void                CpuCegmonukRomMod();
         void                CpuLoadFile();
         void                CpuSaveFile();

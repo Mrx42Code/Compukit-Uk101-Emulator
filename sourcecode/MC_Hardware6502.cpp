@@ -27,7 +27,6 @@
 // File: MC_Hardware6502.cpp: implementation of the MC_Hardware6502 class.
 //-----------------------------------------------------------------------------
 #include "MC_Hardware6502.h"
-#include "MC_Processor6502.h"
 #include "MC_VideoDisplay.h"
 
 using namespace std;
@@ -68,11 +67,11 @@ static const uint8_t m_KeyboardCodeTable[] = {
 //-----------------------------------------------------------------------------
 // IMPLEMENT_DYNCREATE
 //-----------------------------------------------------------------------------
-uint8_t CpuMemoryRead(uint16_t address);
-void CpuMemoryWrite(uint16_t address, uint8_t value);
-
 MC_Hardware6502 mc_Hardware6502;
 MC_VideoDisplay mc_VideoDisplay;
+
+uint8_t CpuMemoryRead(uint16_t address);
+void CpuMemoryWrite(uint16_t address, uint8_t value);
 MC_Processor6502 mc_Processor6502(CpuMemoryRead, CpuMemoryWrite);
 
 //-----------------------------------------------------------------------------
@@ -100,6 +99,8 @@ void CpuMemoryWrite(uint16_t address, uint8_t value)
 //-----------------------------------------------------------------------------
 MC_Hardware6502::MC_Hardware6502()
 {
+    m_hConsole = nullptr;
+    mcp_Processor6502 = nullptr;
     memset(&m_CpuSettings, 0x00, sizeof(m_CpuSettings));
     m_CpuSettings.SpeedUpDn = CPU6502_SPEED;
     m_CpuSettings.Speed = 2;
@@ -135,7 +136,8 @@ MC_Hardware6502::~MC_Hardware6502()
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::Initialize()
 {
-    CpuMemoryInit();
+    PrintStatus(false, "Hardware Initialize");
+    mcp_Processor6502 = &mc_Processor6502;
     mc_ThreadMain.Running = false;
     mc_ThreadMain.Quit = false;
     mc_ThreadVideo.Running = false;
@@ -147,21 +149,22 @@ void MC_Hardware6502::Initialize()
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::Destroy()
 {
+    PrintStatus(false, "Hardware Destroy");
     Thread_Stop();
     mc_VideoDisplay.Destroy();
+    Sleep(1000);
 }
 //-Public----------------------------------------------------------------------
 // Name: Create()
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::Create()
 {
+    PrintStatus(false, "Hardware Create");
     mc_VideoDisplay.Create();
     mc_VideoDisplay.m_Display.Hwnd = m_App_Hwnd;
+    m_Disassembler6502 = false;
     CpuInitializeAndReset();
     Thread_Create();
-    m_Cpu6502Run = true;
-    CpuReset();
-    m_Disassembler6502 = false;
 }
 //-Public----------------------------------------------------------------------
 // Name: ReSizeDisplay()
@@ -209,6 +212,28 @@ void MC_Hardware6502::KeyboardMapKey(uint8_t& KeyPress)
             }
         }
     }
+}
+//-Public----------------------------------------------------------------------
+// Name: Print(bool Error, std::string Msg)
+//-----------------------------------------------------------------------------
+void MC_Hardware6502::PrintStatus(bool Error, std::string Msg)
+{
+    if (m_hConsole == nullptr) {
+        m_hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    }
+    if (Error) {
+        SetConsoleTextAttribute(m_hConsole, FOREGROUND_RED | FOREGROUND_INTENSITY);
+        printf("[Error]");
+    } else {
+        SetConsoleTextAttribute(m_hConsole, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+        printf("[ Ok  ]");
+    }
+    SetConsoleTextAttribute(m_hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+    printf(" (");
+    SetConsoleTextAttribute(m_hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+    printf(" %s ", Msg.c_str());
+    SetConsoleTextAttribute(m_hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+    printf(")\r\n");
 }
 //-Public----------------------------------------------------------------------
 // Name: CpuMemoryMapRead(uint16_t address)
@@ -283,6 +308,96 @@ void MC_Hardware6502::CpuMemoryMapWrite(uint16_t address, uint8_t value)
 #endif
 }
 //-Public----------------------------------------------------------------------
+// Name: CpuIRQ()
+//-----------------------------------------------------------------------------
+void MC_Hardware6502::CpuIRQ()
+{
+    if (m_Cpu6502Run) {
+        //PrintStatus(false, "Cpu IRQ");
+        //mc_Processor6502.IRQ();
+    }
+}
+//-Public----------------------------------------------------------------------
+// Name: CpuNMI()
+//-----------------------------------------------------------------------------
+void MC_Hardware6502::CpuNMI()
+{
+    if (m_Cpu6502Run) {
+        //PrintStatus(false, "Cpu NMI");
+        //mc_Processor6502.NMI();
+    }
+}
+//-Public----------------------------------------------------------------------
+// Name: CpuReset()
+//-----------------------------------------------------------------------------
+void MC_Hardware6502::CpuReset()
+{
+    bool Cpu6502Run = m_Cpu6502Run;
+    m_Cpu6502Run = false;
+    ReSizeDisplay();
+    mc_VideoDisplay.Forceupdate();
+    Sleep(10);
+    mc_Processor6502.Reset();
+#if CPU6502_TESTMODE
+    mc_Processor6502.SetPC(0x0400);
+#endif
+    PrintStatus(false, "Cpu Reset");
+    if (Cpu6502Run) {
+        PrintStatus(false, "Cpu Run");
+    } else {
+        PrintStatus(false, "Cpu Stop");
+    }
+    Sleep(10);
+    m_Cpu6502Run = Cpu6502Run;
+}
+//-Public----------------------------------------------------------------------
+// Name: CpuStop()
+//-----------------------------------------------------------------------------
+void MC_Hardware6502::CpuStop()
+{
+    m_Cpu6502Step = false;
+    m_Cpu6502Run = false;
+    Sleep(10);
+    PrintStatus(false, "Cpu Stop");
+}
+//-Public----------------------------------------------------------------------
+// Name: CpuRun()
+//-----------------------------------------------------------------------------
+void MC_Hardware6502::CpuRun()
+{
+    PrintStatus(false, "Cpu Run");
+    Sleep(10);
+    m_Cpu6502Step = false;
+    m_Cpu6502Run = true;
+}
+//-Public----------------------------------------------------------------------
+// Name: CpuStep()
+//-----------------------------------------------------------------------------
+void MC_Hardware6502::CpuStep()
+{
+    m_Cpu6502Run = false;
+    m_Cpu6502Step = true;
+}
+//-Public----------------------------------------------------------------------
+// Name: CpuInitializeAndReset()
+//-----------------------------------------------------------------------------
+void MC_Hardware6502::CpuInitializeAndReset()
+{
+    CpuMemoryInit();
+    CpuLoadRoms();
+#if CPU6502_TESTMODE == false
+    CpuCegmonukRomMod();
+#endif
+    ReSizeDisplay();
+    mc_VideoDisplay.Forceupdate();
+    mc_Processor6502.Reset();
+#if CPU6502_TESTMODE
+    mc_Processor6502.SetPC(0x0400);
+#endif
+    PrintStatus(false, "Cpu Initialize And Reset");
+    CpuRun();
+}
+//-Public----------------------------------------------------------------------
 // Name: CpuCalCyclesPer10thSec()
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::CpuCalCyclesPer10thSec()
@@ -305,58 +420,6 @@ void MC_Hardware6502::CpuCalCyclesPer10thSec()
             m_CpuSettings.SpeedUpDn = 0;
         }
     }
-}
-//-Public----------------------------------------------------------------------
-// Name: CpuIRQ()
-//-----------------------------------------------------------------------------
-void MC_Hardware6502::CpuIRQ()
-{
-    if (m_Cpu6502Run) {
-        //mc_Processor6502.IRQ();
-    }
-}
-//-Public----------------------------------------------------------------------
-// Name: CpuNMI()
-//-----------------------------------------------------------------------------
-void MC_Hardware6502::CpuNMI()
-{
-    if (m_Cpu6502Run) {
-        //mc_Processor6502.NMI();
-    }
-}
-//-Public----------------------------------------------------------------------
-// Name: CpuReset()
-//-----------------------------------------------------------------------------
-void MC_Hardware6502::CpuReset()
-{
-    bool Cpu6502Run = m_Cpu6502Run;
-    m_Cpu6502Run = false;
-    ReSizeDisplay();
-    mc_VideoDisplay.Forceupdate();
-    Sleep(10);
-    mc_Processor6502.Reset();
-#if CPU6502_TESTMODE
-    mc_Processor6502.SetPC(0x0400);
-#endif
-    m_Cpu6502Run = Cpu6502Run;
-}
-//-Public----------------------------------------------------------------------
-// Name: CpuInitializeAndReset()
-//-----------------------------------------------------------------------------
-void MC_Hardware6502::CpuInitializeAndReset()
-{
-    CpuMemoryInit();
-    CpuLoadRoms();
-#if CPU6502_TESTMODE == false
-    CpuCegmonukRomMod();
-#endif
-    ReSizeDisplay();
-    mc_VideoDisplay.Forceupdate();
-    mc_Processor6502.Reset();
-#if CPU6502_TESTMODE
-    mc_Processor6502.SetPC(0x0400);
-#endif
-    m_Cpu6502Run = true;
 }
 //-Public----------------------------------------------------------------------
 // Name: CpuCegmonukRomMod()
@@ -483,6 +546,7 @@ void   MC_Hardware6502::CpuPrintMemoryInfo()
 
 
 
+
 //*****************************************************************************  
 // Protected Code
 //*****************************************************************************
@@ -515,6 +579,7 @@ void MC_Hardware6502::CpuMemoryInit()
     m_MemoryKeyScan.KeysDone = true;
     memset(&m_Uart6850, 0x00, sizeof(m_Uart6850));
     Cpu6850Uartinit();
+    PrintStatus(false, "Hardware Cpu Memory Initialize");
  }
 //-Protected-------------------------------------------------------------------
 // Name: Cpu6850Uartinit()
@@ -542,6 +607,7 @@ void MC_Hardware6502::Cpu6850Uartinit()
     m_MemoryMap[DATA_6850ADDR] = m_Uart6850.Input.CharData;
     m_MemoryMap[CTRL_6850ADDR] = m_Uart6850.Registers_SR.byte;
 #endif
+    PrintStatus(false, "Hardware 6850 ACIA Initialize");
 }
 //-Protected-------------------------------------------------------------------
 // Name: CpuEmu6850UartRead(uint16_t address)
@@ -713,7 +779,10 @@ void MC_Hardware6502::MemoryLoad(uint16_t MemoryAddress, uint16_t MemorySize, st
     uint8_t* memblock;
     uint32_t FileSize = 0;
     uint32_t MemMapMaxSize = MemoryAddress + MemorySize;
+    char StatusMsg[256];
+    bool Error = false;
 
+    StatusMsg[0] = 0;
     ifstream file(FileName, ios::in | ios::binary | ios::ate);
     if (file.is_open()) {
         size = file.tellg();
@@ -724,13 +793,17 @@ void MC_Hardware6502::MemoryLoad(uint16_t MemoryAddress, uint16_t MemorySize, st
         file.close();
         if (FileSize <= MemorySize && MemMapMaxSize <= 0x10000) {
             memcpy(&m_MemoryMap[MemoryAddress], memblock, FileSize);
+            snprintf(StatusMsg, sizeof(StatusMsg), "Load Rom Memory($%04X - $%04X) %s", MemoryAddress , MemoryAddress + (FileSize - 1), FileName.c_str());
         } else {
-            printf("file to Big for Memory(%06X,%06X) Slot File %s\r\n", FileSize, MemMapMaxSize -1, FileName.c_str());
+            snprintf(StatusMsg, sizeof(StatusMsg), "Load Rom file to Big for Memory(%06X,%06X) Slot File %s", FileSize, MemMapMaxSize -1, FileName.c_str());
+            Error = true;
         }
         delete[] memblock;
     } else {
-        printf("Unable to open file %s\r\n", FileName.c_str());
+        snprintf(StatusMsg, sizeof(StatusMsg), "Load Rom Unable to open file %s", FileName.c_str());
+        Error = true;
     }
+    PrintStatus(Error, StatusMsg);
 }
 //-Protected-------------------------------------------------------------------
 // Name: MemorySave(uint16_t MemoryAddress , uint16_t MemorySize, std::string FileName)
@@ -739,7 +812,10 @@ void MC_Hardware6502::MemorySave(uint16_t MemoryAddress, uint16_t MemorySize, st
 {
     streampos size;
     uint8_t* memblock;
+    char StatusMsg[256];
+    bool Error = false;
 
+    StatusMsg[0] = 0;
     size = MemorySize;
     fstream file(FileName, ios::out | ios::binary | ios::ate);
     if (file.is_open()) {
@@ -749,9 +825,12 @@ void MC_Hardware6502::MemorySave(uint16_t MemoryAddress, uint16_t MemorySize, st
         file.write((char*)memblock, size);
         file.close();
         delete[] memblock;
+        snprintf(StatusMsg, sizeof(StatusMsg), "Save Memory/Rom ($%04X - $%04X) %s", MemoryAddress, MemoryAddress + (MemorySize - 1), FileName.c_str());
     } else {
-        printf("Unable to Save file %s\r\n", FileName.c_str());
+        snprintf(StatusMsg, sizeof(StatusMsg), "Save Memory/Rom Unable to open file %s", FileName.c_str());
+        Error = true;
     }
+    PrintStatus(Error, StatusMsg);
 }
 //-Protected-------------------------------------------------------------------
 // Name: MemoryLoadIntelFormat(uint16_t MemoryAddress, uint16_t MemorySize, std::string FileName)
@@ -776,9 +855,17 @@ void MC_Hardware6502::MemoryLoadIntelFormat(uint16_t MemoryAddress, uint16_t Mem
     uint8_t Data;
     uint8_t Crc;
     uint8_t LineCrc;
+    char StatusMsg[256];
+    bool Error = false;
 
+    StatusMsg[0] = 0;
+    if (FileName.length() == 0) {
+        return;
+    }
     ifstream file(FileName, ios::in || ios::ate);
     if (file.is_open()) {
+        snprintf(StatusMsg, sizeof(StatusMsg), "Load Intel File Format %s", FileName.c_str());
+        PrintStatus(false, StatusMsg);
         while (std::getline(file, StringLine)) {
             if (StringLine.length() >= 11) {
                 LineLen = strlen(StringLine.c_str());
@@ -821,14 +908,16 @@ void MC_Hardware6502::MemoryLoadIntelFormat(uint16_t MemoryAddress, uint16_t Mem
                     StringNumberOfBytes = StringLine.substr(1, 2);
                     NumberOfBytes = (uint8_t)Hex2Dec(StringNumberOfBytes);
                     if (NumberOfBytes > 0) {
-                        printf("Crc Error %02X %02X %s\r\n", Crc, LineCrc, StringLine.c_str());
+                        snprintf(StatusMsg, sizeof(StatusMsg), "Crc Error %02X %02X %s", Crc, LineCrc, StringLine.c_str());
+                        PrintStatus(true, StatusMsg);
                     }
                 }
             }
         }
         file.close();
     } else {
-        printf("Unable to open file %s\r\n", FileName.c_str());
+        snprintf(StatusMsg, sizeof(StatusMsg), "Unable to open file %s", FileName.c_str());
+        PrintStatus(true, StatusMsg);
     }
 }
 //-Protected-------------------------------------------------------------------
@@ -890,6 +979,9 @@ void MC_Hardware6502::LoadUartData(std::string FileName)
     uint8_t* memblock;
     uint16_t FileSize = 0;
 
+    if (FileName.length() == 0) {
+        return;
+    }
     memset(&m_Uart6850.Input, 0x00, sizeof(m_Uart6850.Input));
     ifstream file(FileName, ios::in | ios::binary | ios::ate);
     if (file.is_open()) {
@@ -919,6 +1011,9 @@ void MC_Hardware6502::SaveUartData(std::string FileName)
     uint8_t* memblock;
     uint16_t FileSize = 0;
 
+    if (FileName.length() == 0) {
+        return;
+    }
     size = m_Uart6850.Output.Index;
     fstream file(FileName, ios::out | ios::binary | ios::ate);
     if (file.is_open()) {
@@ -1100,7 +1195,7 @@ void MC_Hardware6502::Thread_CallBack_Main(int MultiThread_ID)
                 if (m_CpuDebugPanel.BreakPointFlag && m_CpuDebugPanel.BreakPointAddress == mc_Processor6502.GetPC()) {
                     m_Cpu6502Run = false;
                     m_Disassembler6502 = true;
-                    printf("Cpu BreakPoint\r\n");
+                    PrintStatus(false, "Cpu BreakPoint");
                 }
                 if (mc_Processor6502.RunOneOp()) {
                     m_Cpu6502Run = false;                                       // Cpu Crash (Stop Cpu + Memory Dump + Debug Info)
@@ -1112,6 +1207,10 @@ void MC_Hardware6502::Thread_CallBack_Main(int MultiThread_ID)
                 }
             } else if(m_Cpu6502Step) {
                 m_Cpu6502Step = false;
+                if (m_CpuDebugPanel.BreakPointFlag && m_CpuDebugPanel.BreakPointAddress == mc_Processor6502.GetPC()) {
+                    m_Disassembler6502 = true;
+                    PrintStatus(false, "Cpu BreakPoint");
+                }
                 if (mc_Processor6502.RunOneOp()) {
                     mc_Processor6502.DebugCrashInfo(m_MemoryMap);
                 } else {

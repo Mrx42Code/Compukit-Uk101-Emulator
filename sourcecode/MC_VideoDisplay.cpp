@@ -37,6 +37,7 @@ using namespace std;
 //-----------------------------------------------------------------------------
 // IMPLEMENT_DYNCREATE
 //-----------------------------------------------------------------------------
+extern MC_Hardware6502 mc_Hardware6502;
 
 //-----------------------------------------------------------------------------
 // message handlers
@@ -77,7 +78,8 @@ void MC_VideoDisplay::Initialize()
     m_ScreenImage.SelectObj = nullptr;
     m_ScreenImage.Rect = {0, 0, 0, 0};
     m_ScreenImage.DisplayRect = { 0, 0, 0, 0 };
-    m_ScreenImage.Colour = RGB(0, 255, 0);
+    m_ScreenImage.Colour = RGB(0x00, 0xFF, 0x00);
+    mc_Hardware6502.PrintStatus(false, "VideoDisplay Initialize");
 }
 //-Public----------------------------------------------------------------------
 // Name: Destroy()
@@ -88,6 +90,7 @@ void MC_VideoDisplay::Destroy()
     ReleaseDC(m_Display.Hwnd, m_ScreenImage.hdc);
     DeleteObject(m_ScreenImage.Bitmap);
     ReleaseDC(m_Display.Hwnd, m_Display.hdc);
+    mc_Hardware6502.PrintStatus(false, "VideoDisplay Destroy");
 }
 //-Public----------------------------------------------------------------------
 // Name: Create()
@@ -105,6 +108,7 @@ void MC_VideoDisplay::Create()
     m_ScreenImage.DisplayRect.right = Video_Rect.right + VideoLeftOffSet;
     m_ScreenImage.DisplayRect.bottom = Video_Rect.bottom + VideoTopOffSet;
     m_ScreenImage.SelectObj = SelectObject(m_ScreenImage.hdc, m_ScreenImage.Bitmap);
+    mc_Hardware6502.PrintStatus(false, "VideoDisplay Create");
 }
 //-Public----------------------------------------------------------------------
 // Name: ReSizeDisplay()
@@ -186,7 +190,10 @@ void MC_VideoDisplay::CpuEmuLoadCharacterSetRom(std::string FileName)
     streampos size;
     uint8_t* memblock;
     uint16_t FileSize = 0;
+    char StatusMsg[256];
+    bool Error = false;
 
+    StatusMsg[0] = 0;
     ifstream file(FileName, ios::in | ios::binary | ios::ate);
     if (file.is_open()) {
         size = file.tellg();
@@ -197,13 +204,17 @@ void MC_VideoDisplay::CpuEmuLoadCharacterSetRom(std::string FileName)
         FileSize = (uint16_t)size;
         if (FileSize <= MemoryVideoChrMapSize) {
             memcpy(&m_MemoryVideoChrRomMap, memblock, FileSize);
+            snprintf(StatusMsg, sizeof(StatusMsg), "Load CharacterSet Rom %s", FileName.c_str());
         } else {
-            printf("file to Big for CharacterSetRom File %s\r\n", FileName.c_str());
+            snprintf(StatusMsg, sizeof(StatusMsg), "Load CharacterSet Rom file to Big for CharacterSetRom %s", FileName.c_str());
+            Error = true;
         }
         delete[] memblock;
     } else {
-        printf("Unable to open file %s\r\n", FileName.c_str());
+        snprintf(StatusMsg, sizeof(StatusMsg), "Load CharacterSet Rom Unable to open file %s", FileName.c_str());
+        Error = true;
     }
+    mc_Hardware6502.PrintStatus(Error, StatusMsg);
 }
 
 

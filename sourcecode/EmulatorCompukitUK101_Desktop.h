@@ -61,7 +61,7 @@ void                UpdateMenus(HWND hWnd);
 void                DebugControlPanelSetItems(HWND hWnd);
 void                DebugControlPanelGetItems(HWND hWnd);
 void                SetButtonChecked(HWND hWnd, int Button, int Mode);
-void                AddConsole();
+bool                AddConsole();
 void                UpdateConsoleTitle();
 std::wstring        ConvertHexUint16ToWstring(uint16_t Value);
 std::wstring        ConvertHexUint8ToWstring(uint8_t Value);

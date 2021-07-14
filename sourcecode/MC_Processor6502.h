@@ -221,6 +221,7 @@ class MC_Processor6502
 		void				SetPC(uint16_t PC);
 		Registers6502		GetRegisters();
 		void				SetRegisters(Registers6502 Registers);
+
 		bool				RunOneOp();
 		void				RunCode(int32_t cycles, uint64_t& cycleCount, CycleMethod cycleMethod = CycleMethod::CYCLE_COUNT);
 		void				DebugInfo(uint8_t* MemoryMap);
