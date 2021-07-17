@@ -301,11 +301,18 @@ INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARA
             SetWindowText(hDlg, szNewTitle);
             SetWindowText(GetDlgItem(hDlg, IDC_EDIT_DUMPSTARTADDR), ConvertHexUint16ToWstring(mc_Hardware6502.m_CpuDebugPanel.DumpStartAddress).c_str());
             SetWindowText(GetDlgItem(hDlg, IDC_EDIT_DUMPSTOPADDR), ConvertHexUint16ToWstring(mc_Hardware6502.m_CpuDebugPanel.DumpEndAddress).c_str());
-            SetWindowText(GetDlgItem(hDlg, IDC_EDIT_BREAKPOINTADDR), ConvertHexUint16ToWstring(mc_Hardware6502.m_CpuDebugPanel.BreakPointAddress).c_str());
-            if (mc_Hardware6502.m_CpuDebugPanel.BreakPointFlag) {
-                CheckDlgButton(hDlg, IDC_CHECK_BREAKPOINTADDR, BST_CHECKED);
+            SetWindowText(GetDlgItem(hDlg, IDC_EDIT_BREAKPOINTOPCODE), ConvertHexUint16ToWstring(mc_Hardware6502.m_BreakPointOpCode.Address).c_str());
+            SetWindowText(GetDlgItem(hDlg, IDC_EDIT_BREAKPOINTADDRESS), ConvertHexUint16ToWstring(mc_Hardware6502.m_BreakPointMemory.Address).c_str());
+            if (mc_Hardware6502.m_BreakPointOpCode.SetFlag) {
+                CheckDlgButton(hDlg, IDC_CHECK_BREAKPOINTOPCODE, BST_CHECKED);
             } else {
-                CheckDlgButton(hDlg, IDC_CHECK_BREAKPOINTADDR, BST_UNCHECKED);
+                CheckDlgButton(hDlg, IDC_CHECK_BREAKPOINTOPCODE, BST_UNCHECKED);
+            }
+            if (mc_Hardware6502.m_BreakPointMemory.SetFlag) {
+                CheckDlgButton(hDlg, IDC_CHECK_BREAKPOINTADDRESS, BST_CHECKED);
+            }
+            else {
+                CheckDlgButton(hDlg, IDC_CHECK_BREAKPOINTADDRESS, BST_UNCHECKED);
             }
             SetTimer(hDlg, IDT_TIMERDlg, 500, (TIMERPROC)NULL);
             return (INT_PTR)TRUE;
@@ -324,8 +331,33 @@ INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARA
                         EnableWindow(GetDlgItem(hDlg, IDC_BUTTON_RUN), true);
                         EnableWindow(GetDlgItem(hDlg, IDC_BUTTON_STEP), true);
                     }
-                    GetWindowText(GetDlgItem(hDlg, IDC_EDIT_BREAKPOINTADDR), StringValue, 5);
-                    mc_Hardware6502.m_CpuDebugPanel.BreakPointAddress = ConvertHexLPWSTRTouint16(StringValue);
+                    if (BreakPointOpCode) {
+                        EnableWindow(GetDlgItem(hDlg, IDC_CHECK_BREAKPOINTOPCODE), true);
+                        EnableWindow(GetDlgItem(hDlg, IDC_EDIT_BREAKPOINTOPCODE), true);
+                    }
+                    else {
+                        EnableWindow(GetDlgItem(hDlg, IDC_CHECK_BREAKPOINTOPCODE), false);
+                        EnableWindow(GetDlgItem(hDlg, IDC_EDIT_BREAKPOINTOPCODE), false);
+                    }
+                    if (BreakPointMemory) {
+                        EnableWindow(GetDlgItem(hDlg, IDC_CHECK_BREAKPOINTADDRESS), true);
+                        EnableWindow(GetDlgItem(hDlg, IDC_EDIT_BREAKPOINTADDRESS), true);
+                    } else {
+                        EnableWindow(GetDlgItem(hDlg, IDC_CHECK_BREAKPOINTADDRESS), false);
+                        EnableWindow(GetDlgItem(hDlg, IDC_EDIT_BREAKPOINTADDRESS), false);
+                    }
+                    GetWindowText(GetDlgItem(hDlg, IDC_EDIT_BREAKPOINTOPCODE), StringValue, 5);
+                    mc_Hardware6502.m_BreakPointOpCode.Address = ConvertHexLPWSTRTouint16(StringValue);
+                    GetWindowText(GetDlgItem(hDlg, IDC_EDIT_BREAKPOINTADDRESS), StringValue, 5);
+                    mc_Hardware6502.m_BreakPointMemory.Address = ConvertHexLPWSTRTouint16(StringValue);
+
+                    if (mc_Hardware6502.m_CpuDebugPanel.Update && mc_Hardware6502.m_Cpu6502Run == false) {
+                        mc_Hardware6502.m_CpuDebugPanel.Update = false;
+                        //DebugControlPanelSetItems(hDlg);
+                        Registers6502 Registers = mc_Hardware6502.mcp_Processor6502->GetRegisters();
+                        SetWindowText(GetDlgItem(hDlg, IDC_EDIT_PC), ConvertHexUint16ToWstring(Registers.pc).c_str());
+                    }
+
                     break;
             }
             break;
@@ -348,13 +380,22 @@ INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARA
                     mc_Hardware6502.m_CpuDebugPanel.DumpEndAddress = ConvertHexLPWSTRTouint16(StringValue);
                     mc_Hardware6502.CpuMemoryMapDump(mc_Hardware6502.m_CpuDebugPanel.DumpStartAddress , mc_Hardware6502.m_CpuDebugPanel.DumpEndAddress);
                     break;
-                case IDC_CHECK_BREAKPOINTADDR:
-                    GetWindowText(GetDlgItem(hDlg, IDC_EDIT_BREAKPOINTADDR), StringValue, 5);
-                    mc_Hardware6502.m_CpuDebugPanel.BreakPointAddress = ConvertHexLPWSTRTouint16(StringValue);
-                    if (IsDlgButtonChecked(hDlg, IDC_CHECK_BREAKPOINTADDR) == BST_CHECKED) {
-                        mc_Hardware6502.m_CpuDebugPanel.BreakPointFlag = true;
+                case IDC_CHECK_BREAKPOINTOPCODE:
+                    GetWindowText(GetDlgItem(hDlg, IDC_EDIT_BREAKPOINTOPCODE), StringValue, 5);
+                    mc_Hardware6502.m_BreakPointOpCode.Address = ConvertHexLPWSTRTouint16(StringValue);
+                    if (IsDlgButtonChecked(hDlg, IDC_CHECK_BREAKPOINTOPCODE) == BST_CHECKED) {
+                        mc_Hardware6502.m_BreakPointOpCode.SetFlag = true;
                     } else {
-                        mc_Hardware6502.m_CpuDebugPanel.BreakPointFlag = false;
+                        mc_Hardware6502.m_BreakPointOpCode.SetFlag = false;
+                    }
+                    break;
+                case IDC_CHECK_BREAKPOINTADDRESS:
+                    GetWindowText(GetDlgItem(hDlg, IDC_EDIT_BREAKPOINTADDRESS), StringValue, 5);
+                    mc_Hardware6502.m_BreakPointMemory.Address = ConvertHexLPWSTRTouint16(StringValue);
+                    if (IsDlgButtonChecked(hDlg, IDC_CHECK_BREAKPOINTADDRESS) == BST_CHECKED) {
+                        mc_Hardware6502.m_BreakPointMemory.SetFlag = true;
+                    } else {
+                        mc_Hardware6502.m_BreakPointMemory.SetFlag = false;
                     }
                     break;
                 case IDC_CHECK_DEBUG:
@@ -388,7 +429,7 @@ INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARA
                     break;
                 case IDC_BUTTON_STEP:
                     mc_Hardware6502.m_Cpu6502Run = false;
-                    Sleep(10);
+                    Sleep(100);
                     DebugControlPanelGetItems(hDlg);
                     mc_Hardware6502.CpuStep();
                     StringCchPrintf(szNewTitle, MAX_PATH, TEXT("Debug ControlPanel (Cpu Step)"));

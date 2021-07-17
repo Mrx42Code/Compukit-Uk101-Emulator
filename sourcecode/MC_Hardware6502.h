@@ -38,6 +38,11 @@
 //-----------------------------------------------------------------------------
 // Const
 //-----------------------------------------------------------------------------
+#define BreakPointMemory                    true
+#define BreakPointOpCode                    true
+
+#define USEINIFILESETTING                   false 
+
 #define CPU6502_TESTMODE                    false   
 
 #define CPU6502_CLKREFSPEED				    (1000000 / 10)                      // Cpu 6502 Ref 1 mhz / 10th Sec
@@ -215,9 +220,19 @@ typedef struct CpuSpeedSettings
 typedef struct CpuDebugPanel {
     uint16_t                DumpStartAddress;
     uint16_t                DumpEndAddress;
-    uint16_t                BreakPointAddress;
-    bool                    BreakPointFlag;
+    bool                    Update;
 } CpuDebugPanel;
+
+typedef struct IniFilevector {
+    std::vector<std::string> LineData;
+} _IniFilevector;
+
+typedef struct BreakPoint
+{
+    bool                SetFlag;
+    bool                Found;
+    uint16_t            Address;
+} _BreakPoint;
 
 //-----------------------------------------------------------------------------
 // Name: class MC_Hardware6502
@@ -234,10 +249,13 @@ class MC_Hardware6502
         bool                m_Cpu6502Run;
         bool                m_Cpu6502Step;
         bool                m_Disassembler6502;
+        BreakPoint          m_BreakPointOpCode;
+        BreakPoint          m_BreakPointMemory;
         uint8_t             m_MemoryMap[MemoryMapSizeAddress];
         bool                m_MemoryWriteOverride;
         HWND                m_App_Hwnd;
         CpuDebugPanel       m_CpuDebugPanel;
+        IniFilevector       m_IniFileString;
 
     protected:
         KeyInputType        m_MemoryKeyScan;
@@ -259,13 +277,19 @@ class MC_Hardware6502
         void                KeyboardMapKey(uint8_t& KeyPress);
         void                PrintStatus(bool Error, std::string Msg);
 
+        void                CpuSetParameters();
+        void                CpuSetBreakPointOpCode(bool Enable, uint16_t Address);
+        void                CpuSetBreakPointMemory(bool Enable, uint16_t Address);
+        void				CpuSetPC(uint16_t PC);
+
         void                CpuIRQ();
         void                CpuNMI();
+        void                CpuInitializeAndReset();
         void                CpuReset();
         void                CpuStop();
         void                CpuRun();
         void                CpuStep();
-        void                CpuInitializeAndReset();
+
         void                CpuCalCyclesPer10thSec();
         void                CpuCegmonukRomMod();
         void                CpuLoadFile();
@@ -283,6 +307,7 @@ class MC_Hardware6502
         uint8_t             CpuEmu6850UartRead(uint16_t address);
         void                CpuEmu6850UartWrite(uint16_t address, uint8_t value);
         uint8_t             CpuEmuKeyboard(uint16_t address, bool RW);
+        void                CpuLoadIniFileRoms();
         void                CpuLoadRoms();
 
         void                MemoryLoad(uint16_t MemoryAddress, uint16_t MemorySize, std::string FileName);
@@ -295,6 +320,12 @@ class MC_Hardware6502
         uint16_t            Hex2Dec(std::string s);
         void                PrintHexDump(const char* desc, void* addr, long len);
         void                PrintHexDump16Bit(const char* desc, void* addr, long len, long offset);
+        void                IniFileDefault();
+        std::string         IniFileHeaderAddress(std::string Header, uint16_t MemAddress, uint16_t MemSize);
+        bool                IniFileRead(std::string FileName);
+        bool                IniFileWrite(std::string FileName);
+        bool                TestForBreakPointOpCode();
+        void                TestForBreakPointMemory(uint16_t& address, uint8_t& data, bool ReadWrite);
 
         void				Thread_Create();
 		void				Thread_Stop();

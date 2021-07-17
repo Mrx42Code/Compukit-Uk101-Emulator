@@ -51,3 +51,4 @@
 #include <thread>
 #include <commdlg.h>
 #include <codecvt>
+#include <vector>

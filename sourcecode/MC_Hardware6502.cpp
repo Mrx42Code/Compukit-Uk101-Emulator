@@ -107,16 +107,13 @@ MC_Hardware6502::MC_Hardware6502()
     m_Cpu6502Run = false;
     m_Cpu6502Step = false;
     m_Disassembler6502 = false;
+    memset(&m_BreakPointOpCode, 0, sizeof(m_BreakPointOpCode));
+    memset(&m_BreakPointMemory, 0, sizeof(m_BreakPointMemory));
     m_BasicSelectUk101OrOsi = BasicSelectUk101OrOsi;
     m_App_Hwnd = nullptr;
     m_CpuDebugPanel.DumpStartAddress = 0x0000;
     m_CpuDebugPanel.DumpEndAddress = 0xFFFF;
-#if CPU6502_TESTMODE
-        m_CpuDebugPanel.BreakPointAddress = 0x3469;
-#else
-        m_CpuDebugPanel.BreakPointAddress = 0xFF00;
-#endif
-    m_CpuDebugPanel.BreakPointFlag = false;
+    m_CpuDebugPanel.Update = false;
     CpuMemoryInit();
     mc_ThreadMain.Running = false;
     mc_ThreadMain.Quit = false;
@@ -163,6 +160,13 @@ void MC_Hardware6502::Create()
     mc_VideoDisplay.Create();
     mc_VideoDisplay.m_Display.Hwnd = m_App_Hwnd;
     m_Disassembler6502 = false;
+#if USEINIFILESETTING
+    if (IniFileRead("Compukit_UK101.ini")) {
+        IniFileDefault();
+        IniFileWrite("Compukit_UK101.ini");
+    }
+#endif
+    CpuSetParameters();
     CpuInitializeAndReset();
     Thread_Create();
 }
@@ -240,37 +244,41 @@ void MC_Hardware6502::PrintStatus(bool Error, std::string Msg)
 //-----------------------------------------------------------------------------
 uint8_t MC_Hardware6502::CpuMemoryMapRead(uint16_t address)
 {
+    uint8_t Data = 0xFF;
+
 #if CPU6502_TESTMODE
     return m_MemoryMap[address];
 #else
     if (address >= MemoryRamAddress && address <= MemoryRamEndAddress) {
-        return m_MemoryMap[address];
+        Data = m_MemoryMap[address];
     } else  if (address >= MemoryExtRomAddress && address <= MemoryExtRomEndAddress) {
-        return m_MemoryMap[address];
+        Data = m_MemoryMap[address];
     } else  if (address >= MemoryParPortAddress && address <= MemoryParPortEndAddress) {
-        return m_MemoryMap[address];
+        Data = m_MemoryMap[address];
     } else  if (address >= MemoryBasic5RomAddress && address <= MemoryBasic5RomEndAddress) {
-        return m_MemoryMap[address];
+        Data = m_MemoryMap[address];
     } else  if (address >= MemoryDiskRomAddress && address <= MemoryDiskRomEndAddress) {
-        return m_MemoryMap[address];
+        Data = m_MemoryMap[address];
     } else  if (address >= MemoryBasicRomAddress && address <= MemoryBasicRomEndAddress) {
-        return m_MemoryMap[address];
+        Data = m_MemoryMap[address];
     } else  if (address >= MemoryDiskAddress && address <= MemoryDiskEndAddress) {
-        return m_MemoryMap[address];
+        Data = m_MemoryMap[address];
     } else  if (address >= MemoryVideoAddress && address <= MemoryVideoEndAddress) {
-        return m_MemoryMap[address];
+        Data = m_MemoryMap[address];
     } else  if (address >= (MemoryVideoAddress + MemoryVideoSizeAddress) && address <= ((MemoryVideoAddress + MemoryVideoSizeAddress) + 0x3F) ) {     //Bug Fix 48 Line Scroll Up
-        return m_MemoryMap[address];
+        Data = m_MemoryMap[address];
     } else  if (address >= MemoryKeyboardAddress && address <= MemoryKeyboardEndAddress) {
-        return CpuEmuKeyboard(address, true);
+        Data = CpuEmuKeyboard(address, true);
     } else  if (address >= Memory6850Address && address <= Memory6850EndAddress) {
-        return CpuEmu6850UartRead(address);
+        Data = CpuEmu6850UartRead(address);
     } else  if (address >= MemoryMonitorRomAddress && address <= MemoryMonitorRomEndAddress) {
-        return m_MemoryMap[address];
-    } else {
-        return 0xFF;
+        Data = m_MemoryMap[address];
     }
 #endif
+#if BreakPointMemory
+    TestForBreakPointMemory(address, Data, true);
+#endif
+    return Data;
 }
 //-Public----------------------------------------------------------------------
 // Name: CpuMemoryMapWrite(uint16_t address, uint8_t value)
@@ -306,6 +314,9 @@ void MC_Hardware6502::CpuMemoryMapWrite(uint16_t address, uint8_t value)
         m_MemoryMap[address] = value;
     }
 #endif
+#if BreakPointMemory
+    TestForBreakPointMemory(address, value, false);
+#endif
 }
 //-Public----------------------------------------------------------------------
 // Name: CpuIRQ()
@@ -326,6 +337,29 @@ void MC_Hardware6502::CpuNMI()
         //PrintStatus(false, "Cpu NMI");
         //mc_Processor6502.NMI();
     }
+}
+//-Public----------------------------------------------------------------------
+// Name: CpuInitializeAndReset()
+//-----------------------------------------------------------------------------
+void MC_Hardware6502::CpuInitializeAndReset()
+{
+    CpuMemoryInit();
+#if USEINIFILESETTING
+    CpuLoadIniFileRoms();
+#else
+    CpuLoadRoms();
+#endif
+#if CPU6502_TESTMODE == false
+    CpuCegmonukRomMod();
+#endif
+    ReSizeDisplay();
+    mc_VideoDisplay.Forceupdate();
+    mc_Processor6502.Reset();
+#if CPU6502_TESTMODE
+    mc_Processor6502.SetPC(0x0400);
+#endif
+    PrintStatus(false, "Cpu Initialize And Reset");
+    CpuRun();
 }
 //-Public----------------------------------------------------------------------
 // Name: CpuReset()
@@ -379,23 +413,67 @@ void MC_Hardware6502::CpuStep()
     m_Cpu6502Step = true;
 }
 //-Public----------------------------------------------------------------------
-// Name: CpuInitializeAndReset()
+// Name: CpuSetParameters()
 //-----------------------------------------------------------------------------
-void MC_Hardware6502::CpuInitializeAndReset()
+void MC_Hardware6502::CpuSetParameters()
 {
-    CpuMemoryInit();
-    CpuLoadRoms();
-#if CPU6502_TESTMODE == false
-    CpuCegmonukRomMod();
-#endif
-    ReSizeDisplay();
-    mc_VideoDisplay.Forceupdate();
-    mc_Processor6502.Reset();
+    PrintStatus(false, "Cpu SetParameters");
 #if CPU6502_TESTMODE
-    mc_Processor6502.SetPC(0x0400);
+    #if BreakPointMemory
+        CpuSetBreakPointMemory(false, 0x0046);
+    #endif
+    #if BreakPointOpCode
+        CpuSetBreakPointOpCode(false, 0x3469);
+    #endif
+#else
+    #if BreakPointMemory
+        CpuSetBreakPointMemory(false, 0xF000);
+    #endif
+    #if BreakPointOpCode
+        CpuSetBreakPointOpCode(false, 0xFF00);
+    #endif
 #endif
-    PrintStatus(false, "Cpu Initialize And Reset");
-    CpuRun();
+}
+//-Public----------------------------------------------------------------------
+// Name: CpuSetBreakPointOpCode(bool Enable, uint16_t Address)
+//-----------------------------------------------------------------------------
+void MC_Hardware6502::CpuSetBreakPointOpCode(bool Enable, uint16_t Address)
+{
+    char buf[256];
+
+    m_BreakPointOpCode.SetFlag = Enable;
+    m_BreakPointOpCode.Address = Address;
+    m_BreakPointOpCode.Found = false;
+    if (m_BreakPointOpCode.SetFlag) {
+        snprintf(buf, sizeof(buf), "Cpu Set BreakPoint OpCode $%04X", Address);
+        PrintStatus(false, buf);
+    }
+}
+//-Public----------------------------------------------------------------------
+// Name: CpuSetBreakPointMemory(bool Enable, uint16_t Address)
+//-----------------------------------------------------------------------------
+void MC_Hardware6502::CpuSetBreakPointMemory(bool Enable, uint16_t Address)
+{
+    char buf[256];
+
+    m_BreakPointMemory.SetFlag = Enable;
+    m_BreakPointMemory.Address = Address;
+    m_BreakPointMemory.Found = false;
+    if (m_BreakPointMemory.SetFlag) {
+        snprintf(buf, sizeof(buf), "Cpu Set BreakPoint Memory $%04X", Address);
+        PrintStatus(false, buf);
+    }
+}
+//-Protected-------------------------------------------------------------------
+// Name: CpuSetPC(uint16_t PC)
+//-----------------------------------------------------------------------------
+void MC_Hardware6502::CpuSetPC(uint16_t PC)
+{
+    char buf[256];
+
+    snprintf(buf, sizeof(buf), "Cpu Set PC $%04X", PC);
+    PrintStatus(false, buf);
+    mc_Processor6502.SetPC(0x0400);
 }
 //-Public----------------------------------------------------------------------
 // Name: CpuCalCyclesPer10thSec()
@@ -404,8 +482,13 @@ void MC_Hardware6502::CpuCalCyclesPer10thSec()
 {
     long TotalSpeed = (m_CpuSettings.Speed * CPU6502_CLKREFSPEED);
     double CpuSpeed10th = double(TotalSpeed);
-    m_CpuSettings.CyclesPerSec = (double)(mc_Processor6502.m_TotalCyclesPerSec);
-    mc_Processor6502.m_TotalCyclesPerSec = 0;
+
+    if (mc_Processor6502.m_TotalCyclesPerSec == 0) {
+        m_CpuSettings.CyclesPerSec = CpuSpeed10th;
+    }  else {
+        m_CpuSettings.CyclesPerSec = (double)(mc_Processor6502.m_TotalCyclesPerSec);
+        mc_Processor6502.m_TotalCyclesPerSec = 0;
+    }
     if (m_Cpu6502Run && !m_Disassembler6502) {
         m_CpuSettings.AvrSpeed = (m_CpuSettings.AvrSpeed * 0.9) + (m_CpuSettings.CyclesPerSec * 0.1);
         m_CpuSettings.AvrBigSpeed = (m_CpuSettings.AvrBigSpeed * 0.9) + (m_CpuSettings.AvrSpeed * 0.1);
@@ -417,8 +500,13 @@ void MC_Hardware6502::CpuCalCyclesPer10thSec()
                 m_CpuSettings.SpeedUpDn -= (20.0f / (float)(m_CpuSettings.CyclesPerSec / CPU6502_CLKREFSPEED));
             }
         } else {
-            m_CpuSettings.SpeedUpDn = 0;
+            m_CpuSettings.SpeedUpDn = 0.0f;
         }
+    }
+    if (m_CpuSettings.SpeedUpDn < 0.0f) {
+        m_CpuSettings.SpeedUpDn = 0.0f;
+    } else if (m_CpuSettings.SpeedUpDn > 10000.0f) {
+        m_CpuSettings.SpeedUpDn = 10000.0f;
     }
 }
 //-Public----------------------------------------------------------------------
@@ -721,7 +809,63 @@ uint8_t MC_Hardware6502::CpuEmuKeyboard(uint16_t address, bool RW)
     }
     return Data;
 }
+//-Protected-------------------------------------------------------------------
+// Name: CpuLoadIniFileRoms()
+//-----------------------------------------------------------------------------
+void MC_Hardware6502::CpuLoadIniFileRoms()
+{
+    std::string StringLine;
+    std::string StringFind;
+    std::size_t Found;
+    std::string Name;
+    std::string Value;
 
+    for (auto LineItem = m_IniFileString.LineData.begin(); LineItem != m_IniFileString.LineData.end(); ++LineItem) {
+        StringLine = LineItem->c_str();
+        if (StringLine.length() > 0) {
+            StringFind = "ExtRomFile = ";
+            Found = StringLine.find(StringFind);
+            if (Found != std::string::npos) {
+                StringLine.replace(StringLine.find(StringFind), StringFind.length(), "");
+                if (StringLine.length() > 0) {
+                    MemoryLoad(MemoryExtRomAddress, MemoryExtRomSizeAddress, StringLine);
+                }
+            }
+            StringFind = "DiskRomFile = ";
+            Found = StringLine.find(StringFind);
+            if (Found != std::string::npos) {
+                StringLine.replace(StringLine.find(StringFind), StringFind.length(), "");
+                if (StringLine.length() > 0) {
+                    MemoryLoad(MemoryDiskRomAddress, MemoryDiskRomAddress, StringLine);
+                }
+            }
+            StringFind = "BasicRomFile = ";
+            Found = StringLine.find(StringFind);
+            if (Found != std::string::npos) {
+                StringLine.replace(StringLine.find(StringFind), StringFind.length(), "");
+                if (StringLine.length()> 0) {
+                    MemoryLoad(MemoryBasicRomAddress, MemoryBasicRomSizeAddress, StringLine);
+                }
+            }
+            StringFind = "MonitorRomFile = ";
+            Found = StringLine.find(StringFind);
+            if (Found != std::string::npos) {
+                StringLine.replace(StringLine.find(StringFind), StringFind.length(), "");
+                if (StringLine.length() > 0) {
+                    MemoryLoad(MemoryMonitorRomAddress, MemoryMonitorRomSizeAddress, StringLine);
+                }
+            }
+            StringFind = "CharacterSetRomFile = ";
+            Found = StringLine.find(StringFind);
+            if (Found != std::string::npos) {
+                StringLine.replace(StringLine.find(StringFind), StringFind.length(), "");
+                if (StringLine.length() > 0) {
+                    mc_VideoDisplay.CpuEmuLoadCharacterSetRom(StringLine);
+                }
+            }
+        }
+    }
+}
 //-Protected-------------------------------------------------------------------
 // Name: CpuLoadRoms()
 //-----------------------------------------------------------------------------
@@ -793,14 +937,14 @@ void MC_Hardware6502::MemoryLoad(uint16_t MemoryAddress, uint16_t MemorySize, st
         file.close();
         if (FileSize <= MemorySize && MemMapMaxSize <= 0x10000) {
             memcpy(&m_MemoryMap[MemoryAddress], memblock, FileSize);
-            snprintf(StatusMsg, sizeof(StatusMsg), "Load Rom Memory($%04X - $%04X) %s", MemoryAddress , MemoryAddress + (FileSize - 1), FileName.c_str());
+            snprintf(StatusMsg, sizeof(StatusMsg), "Load Ram/Rom ($%04X - $%04X) %s", MemoryAddress , MemoryAddress + (FileSize - 1), FileName.c_str());
         } else {
-            snprintf(StatusMsg, sizeof(StatusMsg), "Load Rom file to Big for Memory(%06X,%06X) Slot File %s", FileSize, MemMapMaxSize -1, FileName.c_str());
+            snprintf(StatusMsg, sizeof(StatusMsg), "Load Ram/Rom file to Big for Memory(%06X,%06X) Slot File %s", FileSize, MemMapMaxSize -1, FileName.c_str());
             Error = true;
         }
         delete[] memblock;
     } else {
-        snprintf(StatusMsg, sizeof(StatusMsg), "Load Rom Unable to open file %s", FileName.c_str());
+        snprintf(StatusMsg, sizeof(StatusMsg), "Load Ram/Rom Unable to open file %s", FileName.c_str());
         Error = true;
     }
     PrintStatus(Error, StatusMsg);
@@ -825,9 +969,9 @@ void MC_Hardware6502::MemorySave(uint16_t MemoryAddress, uint16_t MemorySize, st
         file.write((char*)memblock, size);
         file.close();
         delete[] memblock;
-        snprintf(StatusMsg, sizeof(StatusMsg), "Save Memory/Rom ($%04X - $%04X) %s", MemoryAddress, MemoryAddress + (MemorySize - 1), FileName.c_str());
+        snprintf(StatusMsg, sizeof(StatusMsg), "Save Ram/Rom ($%04X - $%04X) %s", MemoryAddress, MemoryAddress + (MemorySize - 1), FileName.c_str());
     } else {
-        snprintf(StatusMsg, sizeof(StatusMsg), "Save Memory/Rom Unable to open file %s", FileName.c_str());
+        snprintf(StatusMsg, sizeof(StatusMsg), "Save Ram/Rom Unable to open file %s", FileName.c_str());
         Error = true;
     }
     PrintStatus(Error, StatusMsg);
@@ -862,10 +1006,11 @@ void MC_Hardware6502::MemoryLoadIntelFormat(uint16_t MemoryAddress, uint16_t Mem
     if (FileName.length() == 0) {
         return;
     }
-    ifstream file(FileName, ios::in || ios::ate);
+    ifstream file(FileName, ios::in | ios::ate);
     if (file.is_open()) {
         snprintf(StatusMsg, sizeof(StatusMsg), "Load Intel File Format %s", FileName.c_str());
         PrintStatus(false, StatusMsg);
+        file.seekg(0, ios::beg);
         while (std::getline(file, StringLine)) {
             if (StringLine.length() >= 11) {
                 LineLen = strlen(StringLine.c_str());
@@ -1146,6 +1291,164 @@ void MC_Hardware6502::PrintHexDump16Bit(const char* desc, void* addr, long len, 
     printf("-----  ------------------------------------------------\r\n");
 }
 //-Protected-------------------------------------------------------------------
+// Name: IniFileDefault()
+//-----------------------------------------------------------------------------
+void MC_Hardware6502::IniFileDefault()
+{
+    std::string LineData;
+
+    PrintStatus(false, "Set IniFile Default");
+
+    LineData = IniFileHeaderAddress("Ram", MemoryRamAddress, MemoryRamSizeAddress);
+    m_IniFileString.LineData.push_back(LineData);
+    LineData = "RamFile = ";
+    m_IniFileString.LineData.push_back(LineData);
+
+    LineData = IniFileHeaderAddress("ExtRom", MemoryExtRomAddress, MemoryExtRomSizeAddress);
+    m_IniFileString.LineData.push_back(LineData);
+    LineData = "ExtRomFile = GoodRoms/ExtMonitor.rom";
+    m_IniFileString.LineData.push_back(LineData);
+
+    LineData = IniFileHeaderAddress("DiskRom", MemoryDiskRomAddress, MemoryDiskRomSizeAddress);
+    m_IniFileString.LineData.push_back(LineData);
+//    LineData = "DiskRomFile = GoodRoms/Disk.rom";
+    LineData =  "DiskRomFile = ";
+    m_IniFileString.LineData.push_back(LineData);
+
+    LineData = IniFileHeaderAddress("BasicRom", MemoryBasicRomAddress, MemoryBasicRomSizeAddress);
+    m_IniFileString.LineData.push_back(LineData);
+    LineData = "BasicRomFile = GoodRoms/BASIC-UK101-8k.rom";
+    m_IniFileString.LineData.push_back(LineData);
+
+    LineData = IniFileHeaderAddress("MonitorRom", MemoryMonitorRomAddress, MemoryMonitorRomSizeAddress);
+    m_IniFileString.LineData.push_back(LineData);
+    if (HardWareHiResScreen) {
+        LineData = "MonitorRomFile = GoodRoms/cegmonuk48x48.rom";
+    } else if (HardWareMedResScreen) {
+        LineData = "MonitorRomFile = GoodRoms/cegmonuk48x32.rom";
+    } else {
+        LineData = "MonitorRomFile = GoodRoms/cegmonuk48x16.rom";
+    }
+    m_IniFileString.LineData.push_back(LineData);
+
+    LineData = IniFileHeaderAddress("CharacterSetRom", 0x0000, 0x0800);
+    m_IniFileString.LineData.push_back(LineData);
+    LineData = "CharacterSetRomFile = GoodRoms/CharacterSetuk101.rom";
+    m_IniFileString.LineData.push_back(LineData);
+}
+//-Protected-------------------------------------------------------------------
+// Name: IniFileAddress(std::string Header, uint16_t MemAddress, uint16_t MemSize)
+//-----------------------------------------------------------------------------
+std::string MC_Hardware6502::IniFileHeaderAddress(std::string Header, uint16_t MemAddress, uint16_t MemSize)
+{
+    char Data[256];
+    std::string StrData;
+
+    memset(&Data, 0x00, sizeof(Data));
+    snprintf(Data, sizeof(Data), "[%s $%04X-$%04X]", Header.c_str(), MemAddress, (MemAddress + MemSize) - 1);
+    StrData = Data;
+    return StrData;
+}
+//-Protected-------------------------------------------------------------------
+// Name: IniFileRead(std::string FileName)
+//-----------------------------------------------------------------------------
+bool MC_Hardware6502::IniFileRead(std::string FileName)
+{
+    std::string LineData;
+    char StatusMsg[256];
+    bool Error = false;
+
+    StatusMsg[0] = 0;
+    if (FileName.length() == 0) {
+        return Error;
+    }
+    ifstream file(FileName, ios::in | ios::ate);
+    if (file.is_open()) {
+        m_IniFileString.LineData.clear();
+        m_IniFileString.LineData.shrink_to_fit();
+        snprintf(StatusMsg, sizeof(StatusMsg), "IniFileRead %s", FileName.c_str());
+        PrintStatus(Error, StatusMsg);
+        file.seekg(0, ios::beg);
+        while (std::getline(file, LineData)) {
+            if (LineData.length() > 0) {
+                m_IniFileString.LineData.push_back(LineData);
+            }
+        }
+        file.close();
+    } else {
+        Error = true;
+        snprintf(StatusMsg, sizeof(StatusMsg), "IniFileRead Unable to open file %s", FileName.c_str());
+        PrintStatus(Error, StatusMsg);
+    }
+    return Error;
+}
+//-Protected-------------------------------------------------------------------
+// Name: IniFileWrite(std::string FileName)
+//-----------------------------------------------------------------------------
+bool MC_Hardware6502::IniFileWrite(std::string FileName)
+{
+    std::string StringLine;
+    char StatusMsg[256];
+    bool Error = false;
+
+    StatusMsg[0] = 0;
+    if (FileName.length() == 0) {
+        return Error;
+    }
+    fstream file(FileName, ios::out | ios::ate);
+    if (file.is_open()) {
+        snprintf(StatusMsg, sizeof(StatusMsg), "IniFileWrite %s", FileName.c_str());
+        PrintStatus(Error, StatusMsg);
+        file.seekg(0, ios::beg);
+        for (auto LineItem = m_IniFileString.LineData.begin(); LineItem != m_IniFileString.LineData.end(); ++LineItem) {
+            StringLine = LineItem->c_str();
+            if (StringLine.length() > 0) {
+                StringLine.append("\n");
+                file.write(StringLine.c_str(), StringLine.length());
+            }
+        }
+        file.close();
+    } else {
+        Error = true;
+        snprintf(StatusMsg, sizeof(StatusMsg), "IniFileWrite Unable to save file %s", FileName.c_str());
+        PrintStatus(Error, StatusMsg);
+    }
+    return Error;
+}
+//-Protected-------------------------------------------------------------------
+// Name: TestForBreakPointOpCode()
+//-----------------------------------------------------------------------------
+bool MC_Hardware6502::TestForBreakPointOpCode()
+{
+    if (m_BreakPointOpCode.SetFlag && m_BreakPointOpCode.Address == mc_Processor6502.GetPC()) {
+        m_BreakPointOpCode.Found = true;
+        m_CpuDebugPanel.Update = true;
+        PrintStatus(false, "Cpu BreakPoint OpCode");
+    } else {
+        m_BreakPointOpCode.Found = false;
+    }
+    return m_BreakPointOpCode.Found;
+}
+//-Protected-------------------------------------------------------------------
+// Name: TestForBreakPointMemory(uint16_t& address, uint8_t& data, bool ReadWrite)
+//-----------------------------------------------------------------------------
+void MC_Hardware6502::TestForBreakPointMemory(uint16_t& address, uint8_t& data, bool ReadWrite)
+{
+    char buf[256];
+
+    if (m_BreakPointMemory.SetFlag && m_BreakPointMemory.Address == address) {
+        m_BreakPointMemory.Found = true;
+        m_CpuDebugPanel.Update = true;
+        if (ReadWrite) {
+            snprintf(buf, sizeof(buf), "Cpu BreakPoint Memory $%04X Read %02X", address, data);
+            PrintStatus(false, buf);
+        } else {
+            snprintf(buf, sizeof(buf), "Cpu BreakPoint Memory $%04X Write %02X", address, data);
+            PrintStatus(false, buf);
+        }
+    }
+}
+//-Protected-------------------------------------------------------------------
 // Name: Thread_Create()
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::Thread_Create()
@@ -1191,26 +1494,40 @@ void MC_Hardware6502::Thread_CallBack_Main(int MultiThread_ID)
         CpuDelayTime++;
         if (CpuDelayTime > m_CpuSettings.SpeedUpDn) {
             CpuDelayTime = 0;
+#if BreakPointMemory
+            m_BreakPointMemory.Found = false;
+#endif
             if (m_Cpu6502Run) {
-                if (m_CpuDebugPanel.BreakPointFlag && m_CpuDebugPanel.BreakPointAddress == mc_Processor6502.GetPC()) {
+#if BreakPointOpCode
+                if (TestForBreakPointOpCode()) {
                     m_Cpu6502Run = false;
                     m_Disassembler6502 = true;
-                    PrintStatus(false, "Cpu BreakPoint");
                 }
+#endif
                 if (mc_Processor6502.RunOneOp()) {
                     m_Cpu6502Run = false;                                       // Cpu Crash (Stop Cpu + Memory Dump + Debug Info)
                     mc_Processor6502.DebugCrashInfo(m_MemoryMap);
                 } else {
                     if (m_Disassembler6502) {
                         mc_Processor6502.DebugInfo(m_MemoryMap);
+                    } 
+                    if(m_BreakPointMemory.Found) {
+#if BreakPointMemory
+                        m_Cpu6502Run = false;
+                        if (!m_Disassembler6502) {
+                            mc_Processor6502.DebugInfo(m_MemoryMap);
+                        }
+#endif
                     }
+
                 }
             } else if(m_Cpu6502Step) {
                 m_Cpu6502Step = false;
-                if (m_CpuDebugPanel.BreakPointFlag && m_CpuDebugPanel.BreakPointAddress == mc_Processor6502.GetPC()) {
+#if BreakPointOpCode
+                if (TestForBreakPointOpCode()) {
                     m_Disassembler6502 = true;
-                    PrintStatus(false, "Cpu BreakPoint");
                 }
+#endif
                 if (mc_Processor6502.RunOneOp()) {
                     mc_Processor6502.DebugCrashInfo(m_MemoryMap);
                 } else {

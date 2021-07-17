@@ -16,8 +16,8 @@
 #define IDC_EDIT_DUMPSTARTADDR          1000
 #define IDC_EDIT_DUMPSTOPADDR           1001
 #define IDC_BUTTON_MEMORYDUMP           1002
-#define IDC_EDIT_BREAKPOINTADDR         1003
-#define IDC_CHECK_BREAKPOINTADDR        1004
+#define IDC_EDIT_BREAKPOINTOPCODE       1003
+#define IDC_CHECK_BREAKPOINTOPCODE      1004
 #define IDC_BUTTON_STOP                 1005
 #define IDC_BUTTON_RUN                  1006
 #define IDC_BUTTON_STEP                 1007
@@ -35,9 +35,11 @@
 #define IDC_CHECK_ST_I                  1019
 #define IDC_CHECK_ST_Z                  1020
 #define IDC_CHECK_ST_C                  1021
+#define IDC_EDIT_BREAKPOINTADDRESS      1022
+#define IDC_CHECK_BREAKPOINTADDRESS     1023
 #define IDM_FILE_SAVE                   32774
 #define IDM_FILE_LOAD                   32775
-#define IDM_FILE_MEMLOAD				32776
+#define IDM_FILE_MEMLOAD                32776
 #define IDM_DEBUG_MEMORYDUMP            32777
 #define IDM_DEBUG_CPUDEBUGON            32778
 #define IDM_DEBUG_CPUDEBUGOFF           32779
@@ -56,7 +58,7 @@
 #define IDM_CPUSPEED32                  32794
 #define IDM_CPUSPEEDMAX                 32795
 #define IDM_DEBUG_CPUDEBUGCONTROLPANEL  32796
-#define IDM_CPUINFO						32797
+#define IDM_CPUINFO                     32797
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
