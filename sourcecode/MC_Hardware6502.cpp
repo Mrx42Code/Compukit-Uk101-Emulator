@@ -218,26 +218,15 @@ void MC_Hardware6502::KeyboardMapKey(uint8_t& KeyPress)
     }
 }
 //-Public----------------------------------------------------------------------
-// Name: Print(bool Error, std::string Msg)
+// Name: PrintStatus(bool Error, std::string Msg)
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::PrintStatus(bool Error, std::string Msg)
 {
-    if (m_hConsole == nullptr) {
-        m_hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    }
     if (Error) {
-        SetConsoleTextAttribute(m_hConsole, FOREGROUND_RED | FOREGROUND_INTENSITY);
-        printf("[Error]");
+        printf("\u001b[31;1m[Error]\u001b[0m ( \u001b[33;1m%s\u001b[0m )\r\n", Msg.c_str());
     } else {
-        SetConsoleTextAttribute(m_hConsole, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
-        printf("[ Ok  ]");
+        printf("\u001b[32;1m[ Ok  ]\u001b[0m ( \u001b[33;1m%s\u001b[0m )\r\n", Msg.c_str());
     }
-    SetConsoleTextAttribute(m_hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
-    printf(" (");
-    SetConsoleTextAttribute(m_hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY);
-    printf(" %s ", Msg.c_str());
-    SetConsoleTextAttribute(m_hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
-    printf(")\r\n");
 }
 //-Public----------------------------------------------------------------------
 // Name: CpuMemoryMapRead(uint16_t address)

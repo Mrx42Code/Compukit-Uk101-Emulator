@@ -657,12 +657,19 @@ void SetButtonChecked(HWND hWnd, int Button, int Mode)
 bool AddConsole()
 {
     HANDLE hConsole = nullptr;
+    DWORD mode;
 
     if (AllocConsole() == 0) {
         return true;                                                                 // Handle error here. Use ::GetLastError() to get the error.
     }
     hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    if (GetConsoleMode(hConsole, &mode)) {
+        if (!(mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
+            mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+            SetConsoleMode(hConsole, mode);
+        }
+    }
     // Redirect CRT standard input, output and error handles to the console window.
     FILE* pNewStdout = nullptr;
     FILE* pNewStderr = nullptr;
