@@ -29,8 +29,6 @@
 #include "MC_VideoDisplay.h"
 #include "MC_Hardware6502.h"
 
-using namespace std;
-
 //*****************************************************************************  
 // Public Code
 //*****************************************************************************
@@ -188,18 +186,18 @@ void MC_VideoDisplay::CpuEmuRenderDisplay()
 //-----------------------------------------------------------------------------
 void MC_VideoDisplay::CpuEmuLoadCharacterSetRom(std::string FileName)
 {
-    streampos size;
+    std::streampos size;
     uint8_t* memblock;
     uint16_t FileSize = 0;
     char StatusMsg[256];
     bool Error = false;
 
     StatusMsg[0] = 0;
-    ifstream file(FileName, ios::in | ios::binary | ios::ate);
+    std::ifstream file(FileName, std::ios::in | std::ios::binary | std::ios::ate);
     if (file.is_open()) {
         size = file.tellg();
         memblock = new uint8_t[(uint16_t)size];
-        file.seekg(0, ios::beg);
+        file.seekg(0, std::ios::beg);
         file.read((char*)memblock, size);
         file.close();
         FileSize = (uint16_t)size;

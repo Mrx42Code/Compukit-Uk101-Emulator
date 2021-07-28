@@ -29,8 +29,6 @@
 #include "MC_Hardware6502.h"
 #include "MC_VideoDisplay.h"
 
-using namespace std;
-
 //*****************************************************************************  
 // Public Code
 //*****************************************************************************
@@ -908,7 +906,7 @@ void MC_Hardware6502::CpuLoadRoms()
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::MemoryLoad(uint16_t MemoryAddress, uint16_t MemorySize, std::string FileName)
 {
-    streampos size;
+    std::streampos size;
     uint8_t* memblock;
     uint32_t FileSize = 0;
     uint32_t MemMapMaxSize = MemoryAddress + MemorySize;
@@ -916,12 +914,12 @@ void MC_Hardware6502::MemoryLoad(uint16_t MemoryAddress, uint16_t MemorySize, st
     bool Error = false;
 
     StatusMsg[0] = 0;
-    ifstream file(FileName, ios::in | ios::binary | ios::ate);
+    std::ifstream file(FileName, std::ios::in | std::ios::binary | std::ios::ate);
     if (file.is_open()) {
         size = file.tellg();
         FileSize = (uint32_t)size;
         memblock = new uint8_t[FileSize];
-        file.seekg(0, ios::beg);
+        file.seekg(0, std::ios::beg);
         file.read((char*)memblock, size);
         file.close();
         if (FileSize <= MemorySize && MemMapMaxSize <= 0x10000) {
@@ -943,18 +941,18 @@ void MC_Hardware6502::MemoryLoad(uint16_t MemoryAddress, uint16_t MemorySize, st
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::MemorySave(uint16_t MemoryAddress, uint16_t MemorySize, std::string FileName)
 {
-    streampos size;
+    std::streampos size;
     uint8_t* memblock;
     char StatusMsg[256];
     bool Error = false;
 
     StatusMsg[0] = 0;
     size = MemorySize;
-    fstream file(FileName, ios::out | ios::binary | ios::ate);
+    std::fstream file(FileName, std::ios::out | std::ios::binary | std::ios::ate);
     if (file.is_open()) {
         memblock = new uint8_t[(uint16_t)size];
         memcpy(memblock, &m_MemoryMap[MemoryAddress], (size_t)size);
-        file.seekg(0, ios::beg);
+        file.seekg(0, std::ios::beg);
         file.write((char*)memblock, size);
         file.close();
         delete[] memblock;
@@ -995,11 +993,11 @@ void MC_Hardware6502::MemoryLoadIntelFormat(uint16_t MemoryAddress, uint16_t Mem
     if (FileName.length() == 0) {
         return;
     }
-    ifstream file(FileName, ios::in | ios::ate);
+    std::ifstream file(FileName, std::ios::in | std::ios::ate);
     if (file.is_open()) {
         snprintf(StatusMsg, sizeof(StatusMsg), "Load Intel File Format %s", FileName.c_str());
         PrintStatus(false, StatusMsg);
-        file.seekg(0, ios::beg);
+        file.seekg(0, std::ios::beg);
         while (std::getline(file, StringLine)) {
             if (StringLine.length() >= 11) {
                 LineLen = strlen(StringLine.c_str());
@@ -1109,7 +1107,7 @@ std::string MC_Hardware6502::FilenameSaveDlg(const char* filter, HWND hwnd)
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::LoadUartData(std::string FileName)
 {
-    streampos size;
+    std::streampos size;
     uint8_t* memblock;
     uint16_t FileSize = 0;
 
@@ -1117,11 +1115,11 @@ void MC_Hardware6502::LoadUartData(std::string FileName)
         return;
     }
     memset(&m_Uart6850.Input, 0x00, sizeof(m_Uart6850.Input));
-    ifstream file(FileName, ios::in | ios::binary | ios::ate);
+    std::ifstream file(FileName, std::ios::in | std::ios::binary | std::ios::ate);
     if (file.is_open()) {
         size = file.tellg();
         memblock = new uint8_t[(uint16_t)size];
-        file.seekg(0, ios::beg);
+        file.seekg(0, std::ios::beg);
         file.read((char*)memblock, size);
         file.close();
         FileSize = (uint16_t)size;
@@ -1141,7 +1139,7 @@ void MC_Hardware6502::LoadUartData(std::string FileName)
 //-----------------------------------------------------------------------------
 void MC_Hardware6502::SaveUartData(std::string FileName)
 {
-    streampos size;
+    std::streampos size;
     uint8_t* memblock;
     uint16_t FileSize = 0;
 
@@ -1149,11 +1147,11 @@ void MC_Hardware6502::SaveUartData(std::string FileName)
         return;
     }
     size = m_Uart6850.Output.Index;
-    fstream file(FileName, ios::out | ios::binary | ios::ate);
+    std::fstream file(FileName, std::ios::out | std::ios::binary | std::ios::ate);
     if (file.is_open()) {
         memblock = new uint8_t[(uint16_t)size];
         memcpy(memblock ,&m_Uart6850.Output.Buffer, (size_t)size);
-        file.seekg(0, ios::beg);
+        file.seekg(0, std::ios::beg);
         file.write((char*)memblock, size);
         file.close();
         delete[] memblock;
@@ -1351,13 +1349,13 @@ bool MC_Hardware6502::IniFileRead(std::string FileName)
     if (FileName.length() == 0) {
         return Error;
     }
-    ifstream file(FileName, ios::in | ios::ate);
+    std::ifstream file(FileName, std::ios::in | std::ios::ate);
     if (file.is_open()) {
         m_IniFileString.LineData.clear();
         m_IniFileString.LineData.shrink_to_fit();
         snprintf(StatusMsg, sizeof(StatusMsg), "IniFileRead %s", FileName.c_str());
         PrintStatus(Error, StatusMsg);
-        file.seekg(0, ios::beg);
+        file.seekg(0, std::ios::beg);
         while (std::getline(file, LineData)) {
             if (LineData.length() > 0) {
                 m_IniFileString.LineData.push_back(LineData);
@@ -1384,11 +1382,11 @@ bool MC_Hardware6502::IniFileWrite(std::string FileName)
     if (FileName.length() == 0) {
         return Error;
     }
-    fstream file(FileName, ios::out | ios::ate);
+    std::fstream file(FileName, std::ios::out | std::ios::ate);
     if (file.is_open()) {
         snprintf(StatusMsg, sizeof(StatusMsg), "IniFileWrite %s", FileName.c_str());
         PrintStatus(Error, StatusMsg);
-        file.seekg(0, ios::beg);
+        file.seekg(0, std::ios::beg);
         for (auto LineItem = m_IniFileString.LineData.begin(); LineItem != m_IniFileString.LineData.end(); ++LineItem) {
             StringLine = LineItem->c_str();
             if (StringLine.length() > 0) {
