@@ -1,52 +1,63 @@
-/**********************************************************************************
-* MIT License																	  *
-*																				  *
-* Copyright(c) 2017 Gianluca Ghettini											  *
-* https://github.com/gianlucag/mos6502											  *
-*																				  *
-* Disassembler for the 6502 microprocessor										  *
-* Copyright (c) 1998-2014 Tennessee Carmel-Veilleux <veilleux@tentech.ca>         *
-* https://github.com/tcarmelveilleux/dcc6502									  *
-*																				  *
-* Copyright(c) 2021 Mrx42Code                                                     *
-* https://github.com/Mrx42Code/Compukit-Uk101-Emulator  				          *
-*																				  *
-* Permission is hereby granted, free of charge, to any person obtaining a copy    *
-* of this softwareand associated documentation files(the "Software"), to deal	  *
-* in the Software without restriction, including without limitation the rights	  *
-* to use, copy, modify, merge, publish, distribute, sublicense, and /or sell	  *
-* copies of the Software, and to permit persons to whom the Software is			  *
-* furnished to do so, subject to the following conditions :						  *
-*																				  *
-* The above copyright noticeand this permission notice shall be included in all   *
-* copies or substantial portions of the Software.								  *
-*																				  *
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR	  *
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,		  *
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE	  *
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER		  *
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,   *
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE	  *
-* SOFTWARE.																		  *
- **********************************************************************************/
+//*****************************************************************************
+// MIT License
+//
+// Copyright(c) 2017 Gianluca Ghettini
+// https://github.com/gianlucag/mos6502
+//
+// Disassembler for the 6502 microprocessor
+// Copyright (c) 1998-2014 Tennessee Carmel-Veilleux <veilleux@tentech.ca>
+// https://github.com/tcarmelveilleux/dcc6502
+//
+// Copyright(c) 2023 Mrx42Code
+// https://github.com/Mrx42Code/Compukit-Uk101-Emulator
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this softwareand associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions :
+//
+// The above copyright noticeand this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//*****************************************************************************
 
- //-----------------------------------------------------------------------------
- // MC_Processor6502.h is base on mos6502.h & Disassembler dcc6502.h
- //-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+// MC_Processor6502.h is base on mos6502.h & Disassembler dcc6502.h
+//-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
 // File: MC_Processor6502.h: interface for the MC_Processor6502 class.
 // Desc: Application interface for the MC_Processor6502 class.
 //-----------------------------------------------------------------------------
 #ifndef MC_Processor6502_H
-	#define MC_Processor6502_H
+#define MC_Processor6502_H
 
 #pragma once
 
+//-----------------------------------------------------------------------------
+// include Windows standard Libs
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// include Project
+//-----------------------------------------------------------------------------
 #include "framework.h"
 
 //-----------------------------------------------------------------------------
-// Const
+// include Vendors
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// define
 //-----------------------------------------------------------------------------
 #define CrashDumpSize		32
 #define DebugLineLen		512
@@ -86,11 +97,9 @@
 #define LOW_PART(val) ((val) & 0xFFu)
 #define LOAD_WORD(buffer, current_pc) ((uint16_t)buffer[(current_pc) + 1] | (((uint16_t)buffer[(current_pc) + 2]) << 8))
 
-
 //-----------------------------------------------------------------------------
-// Struct
+// struct
 //-----------------------------------------------------------------------------
-
 typedef struct Cycles6502Info
 {
 	bool					CanHaveExCycles;
@@ -145,177 +154,176 @@ enum {
 class MC_Processor6502
 {
 
-	public:
+public:
+	enum class			CycleMethod { INST_COUNT, CYCLE_COUNT };
 
-		enum class			CycleMethod { INST_COUNT, CYCLE_COUNT };
+	typedef void		(MC_Processor6502::* CodeExec)(uint16_t);
+	typedef uint16_t(MC_Processor6502::* AddrExec)();
 
-		typedef void		(MC_Processor6502::* CodeExec)(uint16_t);
-		typedef uint16_t	(MC_Processor6502::* AddrExec)();
+	typedef struct Instr {
+		AddrExec		AddrMode;
+		CodeExec		Code;
+		uint8_t			Cycles;
+		bool			CanHaveExCycles;
+		const char* Mnemonic;
+		uint8_t			AddressingMode;
+	} _Instr;
 
-		typedef struct Instr {
-			AddrExec		AddrMode;
-			CodeExec		Code;
-			uint8_t			Cycles;
-			bool			CanHaveExCycles;
-			const char*		Mnemonic;
-			uint8_t			AddressingMode;
-		} _Instr;
+	typedef struct DebugInfo6502 {
+		uint16_t		pc;
+		Registers6502	Registers;
+		uint8_t			TotalCycles;
+		uint8_t			ExCycles;
+		bool			Updated;
+	} _DebugInfo6502;
 
-		typedef struct DebugInfo6502 {
-			uint16_t		pc;
-			Registers6502	Registers;
-			uint8_t			TotalCycles;
-			uint8_t			ExCycles;
-			bool			Updated;
-		} _DebugInfo6502;
+	typedef struct CrashDump6502
+	{
+		DebugInfo6502   Info[CrashDumpSize];
+		uint16_t		Index;
 
-		typedef struct CrashDump6502
-		{
-			DebugInfo6502   Info[CrashDumpSize];
-			uint16_t		Index;
+	} _CrashDump6502;
 
-		} _CrashDump6502;
+	typedef struct Instruction
+	{
+		uint8_t			OpCode;
+		Instr			instr;
+	} _Instruction;
 
-		typedef struct Instruction
-		{
-			uint8_t			OpCode;
-			Instr			instr;
-		} _Instruction;
+	CrashDump6502		m_CrashDump;
+	DebugInfo6502		m_Debug;
+	uint64_t			m_TotalCyclesPerSec;
 
-		CrashDump6502		m_CrashDump;
-		DebugInfo6502		m_Debug;
-		uint64_t			m_TotalCyclesPerSec;
+private:
+	Instr				m_InstrTbl[256];
+	Instruction			m_Instruction;
+	Registers6502		m_registers;
+	Cycles6502Info		m_Clock;
 
-	protected:
-		Instr				m_InstrTbl[256];
-		Instruction			m_Instruction;
-		Registers6502		m_registers;
-		Cycles6502Info		m_Clock;
+	// IRQ, reset, NMI vectors
+	static const uint16_t s_irqVectorH = 0xFFFF;
+	static const uint16_t s_irqVectorL = 0xFFFE;
+	static const uint16_t s_rstVectorH = 0xFFFD;
+	static const uint16_t s_rstVectorL = 0xFFFC;
+	static const uint16_t s_nmiVectorH = 0xFFFB;
+	static const uint16_t s_nmiVectorL = 0xFFFA;
 
-		// IRQ, reset, NMI vectors
-		static const uint16_t s_irqVectorH = 0xFFFF;
-		static const uint16_t s_irqVectorL = 0xFFFE;
-		static const uint16_t s_rstVectorH = 0xFFFD;
-		static const uint16_t s_rstVectorL = 0xFFFC;
-		static const uint16_t s_nmiVectorH = 0xFFFB;
-		static const uint16_t s_nmiVectorL = 0xFFFA;
+	// read/write callbacks
+	typedef void		(*BusWrite)(uint16_t, uint8_t);
+	typedef uint8_t(*BusRead)(uint16_t);
+	BusRead				MemoryRead;
+	BusWrite			MemoryWrite;
 
-		// read/write callbacks
-		typedef void		(*BusWrite)(uint16_t, uint8_t);
-		typedef uint8_t		(*BusRead)(uint16_t);
-		BusRead				MemoryRead;
-		BusWrite			MemoryWrite;
-
-	private:
+protected:
 
 	//-----------------------------------------------------------------------------
 
-	public:
-							MC_Processor6502();
-							MC_Processor6502(BusRead r, BusWrite w);
-		virtual				~MC_Processor6502();
-		void				NMI();
-		void				IRQ();
-		void				Reset();
-		uint16_t			GetPC();
-		void				SetPC(uint16_t PC);
-		Registers6502		GetRegisters();
-		void				SetRegisters(Registers6502 Registers);
+public:
+	MC_Processor6502();
+	MC_Processor6502(BusRead r, BusWrite w);
+	virtual				~MC_Processor6502();
+	void				NMI();
+	void				IRQ();
+	void				Reset();
+	uint16_t			GetPC();
+	void				SetPC(uint16_t PC);
+	Registers6502		GetRegisters();
+	void				SetRegisters(Registers6502 Registers);
 
-		bool				RunOneOp();
-		void				RunCode(int32_t cycles, uint64_t& cycleCount, CycleMethod cycleMethod = CycleMethod::CYCLE_COUNT);
-		void				DebugInfo(uint8_t* MemoryMap);
-		void				DebugCrashInfo(uint8_t* MemoryMap);
+	bool				RunOneOp();
+	void				RunCode(int32_t cycles, uint64_t& cycleCount, CycleMethod cycleMethod = CycleMethod::CYCLE_COUNT);
+	void				DebugInfo(uint8_t* MemoryMap);
+	void				DebugCrashInfo(uint8_t* MemoryMap);
 
-	protected:
-		void				Initialize();
-		uint8_t				Exec(Instr& instr);
-		// addressing modes
-		uint16_t			Addr_ACC(); // ACCUMULATOR
-		uint16_t			Addr_IMM(); // IMMEDIATE
-		uint16_t			Addr_ABS(); // ABSOLUTE
-		uint16_t			Addr_ZER(); // ZERO PAGE
-		uint16_t			Addr_ZEX(); // INDEXED-X ZERO PAGE
-		uint16_t			Addr_ZEY(); // INDEXED-Y ZERO PAGE
-		uint16_t			Addr_ABX(); // INDEXED-X ABSOLUTE
-		uint16_t			Addr_ABY(); // INDEXED-Y ABSOLUTE
-		uint16_t			Addr_IMP(); // IMPLIED
-		uint16_t			Addr_REL(); // RELATIVE
-		uint16_t			Addr_INX(); // INDEXED-X INDIRECT
-		uint16_t			Addr_INY(); // INDEXED-Y INDIRECT
-		uint16_t			Addr_ABI(); // ABSOLUTE INDIRECT
-		// opcodes (grouped as per datasheet)
-		void				Op_ADC(uint16_t src);
-		void				Op_AND(uint16_t src);
-		void				Op_ASL(uint16_t src);
-		void				Op_ASL_ACC(uint16_t src);
-		void				Op_BCC(uint16_t src);
-		void				Op_BCS(uint16_t src);
-		void				Op_BEQ(uint16_t src);
-		void				Op_BIT(uint16_t src);
-		void				Op_BMI(uint16_t src);
-		void				Op_BNE(uint16_t src);
-		void				Op_BPL(uint16_t src);
-		void				Op_BRK(uint16_t src);
-		void				Op_BVC(uint16_t src);
-		void				Op_BVS(uint16_t src);
-		void				Op_CLC(uint16_t src);
-		void				Op_CLD(uint16_t src);
-		void				Op_CLI(uint16_t src);
-		void				Op_CLV(uint16_t src);
-		void				Op_CMP(uint16_t src);
-		void				Op_CPX(uint16_t src);
-		void				Op_CPY(uint16_t src);
-		void				Op_DEC(uint16_t src);
-		void				Op_DEX(uint16_t src);
-		void				Op_DEY(uint16_t src);
-		void				Op_EOR(uint16_t src);
-		void				Op_INC(uint16_t src);
-		void				Op_INX(uint16_t src);
-		void				Op_INY(uint16_t src);
-		void				Op_JMP(uint16_t src);
-		void				Op_JSR(uint16_t src);
-		void				Op_LDA(uint16_t src);
-		void				Op_LDX(uint16_t src);
-		void				Op_LDY(uint16_t src);
-		void				Op_LSR(uint16_t src);
-		void				Op_LSR_ACC(uint16_t src);
-		void				Op_NOP(uint16_t src);
-		void				Op_ORA(uint16_t src);
-		void				Op_PHA(uint16_t src);
-		void				Op_PHP(uint16_t src);
-		void				Op_PLA(uint16_t src);
-		void				Op_PLP(uint16_t src);
-		void				Op_ROL(uint16_t src);
-		void				Op_ROL_ACC(uint16_t src);
-		void				Op_ROR(uint16_t src);
-		void				Op_ROR_ACC(uint16_t src);
-		void				Op_RTI(uint16_t src);
-		void				Op_RTS(uint16_t src);
-		void				Op_SBC(uint16_t src);
-		void				Op_SEC(uint16_t src);
-		void				Op_SED(uint16_t src);
-		void				Op_SEI(uint16_t src);
-		void				Op_STA(uint16_t src);
-		void				Op_STX(uint16_t src);
-		void				Op_STY(uint16_t src);
-		void				Op_TAX(uint16_t src);
-		void				Op_TAY(uint16_t src);
-		void				Op_TSX(uint16_t src);
-		void				Op_TXA(uint16_t src);
-		void				Op_TXS(uint16_t src);
-		void				Op_TYA(uint16_t src);
-		void				Op_ILLEGAL(uint16_t src);
-		// stack operations
-		inline void			StackPush(uint8_t byte);
-		inline uint8_t		StackPop();
+private:
+	void				Initialize();
+	uint8_t				Exec(Instr& instr);
+	// addressing modes
+	uint16_t			Addr_ACC(); // ACCUMULATOR
+	uint16_t			Addr_IMM(); // IMMEDIATE
+	uint16_t			Addr_ABS(); // ABSOLUTE
+	uint16_t			Addr_ZER(); // ZERO PAGE
+	uint16_t			Addr_ZEX(); // INDEXED-X ZERO PAGE
+	uint16_t			Addr_ZEY(); // INDEXED-Y ZERO PAGE
+	uint16_t			Addr_ABX(); // INDEXED-X ABSOLUTE
+	uint16_t			Addr_ABY(); // INDEXED-Y ABSOLUTE
+	uint16_t			Addr_IMP(); // IMPLIED
+	uint16_t			Addr_REL(); // RELATIVE
+	uint16_t			Addr_INX(); // INDEXED-X INDIRECT
+	uint16_t			Addr_INY(); // INDEXED-Y INDIRECT
+	uint16_t			Addr_ABI(); // ABSOLUTE INDIRECT
+	// opcodes (grouped as per datasheet)
+	void				Op_ADC(uint16_t src);
+	void				Op_AND(uint16_t src);
+	void				Op_ASL(uint16_t src);
+	void				Op_ASL_ACC(uint16_t src);
+	void				Op_BCC(uint16_t src);
+	void				Op_BCS(uint16_t src);
+	void				Op_BEQ(uint16_t src);
+	void				Op_BIT(uint16_t src);
+	void				Op_BMI(uint16_t src);
+	void				Op_BNE(uint16_t src);
+	void				Op_BPL(uint16_t src);
+	void				Op_BRK(uint16_t src);
+	void				Op_BVC(uint16_t src);
+	void				Op_BVS(uint16_t src);
+	void				Op_CLC(uint16_t src);
+	void				Op_CLD(uint16_t src);
+	void				Op_CLI(uint16_t src);
+	void				Op_CLV(uint16_t src);
+	void				Op_CMP(uint16_t src);
+	void				Op_CPX(uint16_t src);
+	void				Op_CPY(uint16_t src);
+	void				Op_DEC(uint16_t src);
+	void				Op_DEX(uint16_t src);
+	void				Op_DEY(uint16_t src);
+	void				Op_EOR(uint16_t src);
+	void				Op_INC(uint16_t src);
+	void				Op_INX(uint16_t src);
+	void				Op_INY(uint16_t src);
+	void				Op_JMP(uint16_t src);
+	void				Op_JSR(uint16_t src);
+	void				Op_LDA(uint16_t src);
+	void				Op_LDX(uint16_t src);
+	void				Op_LDY(uint16_t src);
+	void				Op_LSR(uint16_t src);
+	void				Op_LSR_ACC(uint16_t src);
+	void				Op_NOP(uint16_t src);
+	void				Op_ORA(uint16_t src);
+	void				Op_PHA(uint16_t src);
+	void				Op_PHP(uint16_t src);
+	void				Op_PLA(uint16_t src);
+	void				Op_PLP(uint16_t src);
+	void				Op_ROL(uint16_t src);
+	void				Op_ROL_ACC(uint16_t src);
+	void				Op_ROR(uint16_t src);
+	void				Op_ROR_ACC(uint16_t src);
+	void				Op_RTI(uint16_t src);
+	void				Op_RTS(uint16_t src);
+	void				Op_SBC(uint16_t src);
+	void				Op_SEC(uint16_t src);
+	void				Op_SED(uint16_t src);
+	void				Op_SEI(uint16_t src);
+	void				Op_STA(uint16_t src);
+	void				Op_STX(uint16_t src);
+	void				Op_STY(uint16_t src);
+	void				Op_TAX(uint16_t src);
+	void				Op_TAY(uint16_t src);
+	void				Op_TSX(uint16_t src);
+	void				Op_TXA(uint16_t src);
+	void				Op_TXS(uint16_t src);
+	void				Op_TYA(uint16_t src);
+	void				Op_ILLEGAL(uint16_t src);
+	// stack operations
+	inline void			StackPush(uint8_t byte);
+	inline uint8_t		StackPop();
 
-		void				Disassemble(char* output, size_t outputsize, uint8_t* buffer, uint16_t* pc);
-		void				PrintByteAsBits(char val);
-		void				PrintBits(const char* ty, const char* val, unsigned char* bytes, size_t num_bytes);
-		void				PrintHexDump16Bit(const char* desc, void* addr, long len, long offset);
+	void				Disassemble(char* output, size_t outputsize, uint8_t* buffer, uint16_t* pc);
+	void				PrintByteAsBits(char val);
+	void				PrintBits(const char* ty, const char* val, unsigned char* bytes, size_t num_bytes);
+	void				PrintHexDump16Bit(const char* desc, void* addr, long len, long offset);
 
-	private:
+protected:
 
 };
 //-----------------------------------------------------------------------------

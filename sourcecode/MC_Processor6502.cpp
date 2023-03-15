@@ -1,57 +1,76 @@
-/**********************************************************************************
-* MIT License																	  *
-*																				  *
-* mos6502																		  *
-* Copyright(c) 2017 Gianluca Ghettini											  *
-* https://github.com/gianlucag/mos6502											  *
-*																				  *
-* Disassembler for the 6502 microprocessor										  *
-* Copyright (c) 1998-2014 Tennessee Carmel-Veilleux <veilleux@tentech.ca>         *
-* https://github.com/tcarmelveilleux/dcc6502									  *
-*																				  *
-* Copyright(c) 2021 Mrx42Code                                                     *
-* https://github.com/Mrx42Code/Compukit-Uk101-Emulator  				          *
-*																				  *
-* Permission is hereby granted, free of charge, to any person obtaining a copy    *
-* of this softwareand associated documentation files(the "Software"), to deal	  *
-* in the Software without restriction, including without limitation the rights	  *
-* to use, copy, modify, merge, publish, distribute, sublicense, and /or sell	  *
-* copies of the Software, and to permit persons to whom the Software is			  *
-* furnished to do so, subject to the following conditions :						  *
-*																				  *
-* The above copyright noticeand this permission notice shall be included in all   *
-* copies or substantial portions of the Software.								  *
-*																				  *
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR	  *
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,		  *
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE	  *
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER		  *
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,   *
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE	  *
-* SOFTWARE.																		  *
- **********************************************************************************/
+//*****************************************************************************
+// MIT License
+//
+// Copyright(c) 2017 Gianluca Ghettini
+// https://github.com/gianlucag/mos6502
+//
+// Disassembler for the 6502 microprocessor
+// Copyright (c) 1998-2014 Tennessee Carmel-Veilleux <veilleux@tentech.ca>
+// https://github.com/tcarmelveilleux/dcc6502
+//
+// Copyright(c) 2023 Mrx42Code
+// https://github.com/Mrx42Code/Compukit-Uk101-Emulator
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this softwareand associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions :
+//
+// The above copyright noticeand this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//*****************************************************************************
 
- //-----------------------------------------------------------------------------
- // MC_Processor6502.cpp is base on mos6502.cpp & Disassembler dcc6502.c
- //-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+// MC_Processor6502.cpp is base on mos6502.cpp & Disassembler dcc6502.c
+//-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
 // File: MC_Processor6502.cpp: implementation of the MC_Processor6502 class.
 //-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// include Windows standard Libs
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// include Project
+//-----------------------------------------------------------------------------
 #include "MC_Processor6502.h"
 
-//*****************************************************************************  
+//-----------------------------------------------------------------------------
+// include Vendors
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// Implementation Classes
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// Implementation Variables
+//-----------------------------------------------------------------------------
+const char m_StatusBits[8] = { 'C', 'Z' , 'I' , 'D', 'B', '-', 'O', 'N' };
+
+//-----------------------------------------------------------------------------
+// Private Callback Handlers
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// Private Task Handlers
+//-----------------------------------------------------------------------------
+
+//*****************************************************************************
 // Public Code
 //*****************************************************************************
-const char StatusBits[8] = { 'C', 'Z' , 'I' , 'D', 'B', '-', 'O', 'N' };
-
-//-----------------------------------------------------------------------------
-// IMPLEMENT_DYNCREATE
-//-----------------------------------------------------------------------------
-
-//-----------------------------------------------------------------------------
-// message handlers
-//-----------------------------------------------------------------------------
 
 //-Public----------------------------------------------------------------------
 // Name: MC_Processor6502()
@@ -330,7 +349,8 @@ bool MC_Processor6502::RunOneOp()
 		if (m_CrashDump.Index >= CrashDumpSize) {
 			m_CrashDump.Index = 0;
 		}
-	} else {
+	}
+	else {
 		m_registers.IllegalOpcode = false;
 	}
 	return m_registers.IllegalOpcode;
@@ -353,7 +373,7 @@ void MC_Processor6502::RunCode(int32_t cyclesRemaining, uint64_t& cycleCount, Cy
 //-Public----------------------------------------------------------------------
 // Name: DebugInfo(uint8_t * MemoryMap)
 //-----------------------------------------------------------------------------
-void MC_Processor6502::DebugInfo(uint8_t * MemoryMap)
+void MC_Processor6502::DebugInfo(uint8_t* MemoryMap)
 {
 	char tmpstr[DebugLineLen];
 
@@ -361,7 +381,7 @@ void MC_Processor6502::DebugInfo(uint8_t * MemoryMap)
 	printf("%s A=%02X X=%02X Y=%02X SP=$%04X Cycles=%d(%d) ", tmpstr, m_Debug.Registers.A, m_Debug.Registers.X, m_Debug.Registers.Y, 0x0100 + m_Debug.Registers.sp, m_Debug.TotalCycles, m_Debug.ExCycles);
 	SHOW(uint8_t, m_Debug.Registers.status);
 }
-//-Protected-------------------------------------------------------------------
+//-Public----------------------------------------------------------------------
 // Name: DebugCrashInfo(uint8_t* MemoryMap)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::DebugCrashInfo(uint8_t* MemoryMap)
@@ -390,24 +410,11 @@ void MC_Processor6502::DebugCrashInfo(uint8_t* MemoryMap)
 	}
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-//*****************************************************************************  
-// Protected Code
+//*****************************************************************************
+// Private Code
 //*****************************************************************************
 
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Initialize()
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Initialize()
@@ -422,21 +429,21 @@ void MC_Processor6502::Initialize()
 	MemoryWrite = nullptr;
 	m_TotalCyclesPerSec = 0;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Addr_ACC()
 //-----------------------------------------------------------------------------
 uint16_t MC_Processor6502::Addr_ACC()
 {
 	return 0;																	// not used
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Addr_IMM()
 //-----------------------------------------------------------------------------
 uint16_t MC_Processor6502::Addr_IMM()
 {
 	return m_registers.pc++;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Addr_ABS()
 //-----------------------------------------------------------------------------
 uint16_t MC_Processor6502::Addr_ABS()
@@ -450,21 +457,21 @@ uint16_t MC_Processor6502::Addr_ABS()
 	addr = addrL + (addrH << 8);
 	return addr;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Addr_ZER()
 //-----------------------------------------------------------------------------
 uint16_t MC_Processor6502::Addr_ZER()
 {
 	return MemoryRead(m_registers.pc++);
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Addr_IMP()
 //-----------------------------------------------------------------------------
 uint16_t MC_Processor6502::Addr_IMP()
 {
 	return 0;																	// not used
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Addr_REL()
 //-----------------------------------------------------------------------------
 uint16_t MC_Processor6502::Addr_REL()
@@ -479,7 +486,7 @@ uint16_t MC_Processor6502::Addr_REL()
 	addr = m_registers.pc + (int16_t)offset;
 	return addr;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Addr_ABI()
 //-----------------------------------------------------------------------------
 uint16_t MC_Processor6502::Addr_ABI()
@@ -503,7 +510,7 @@ uint16_t MC_Processor6502::Addr_ABI()
 	addr = effL + 0x100 * effH;
 	return addr;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Addr_ZEX()
 //-----------------------------------------------------------------------------
 uint16_t MC_Processor6502::Addr_ZEX()
@@ -511,7 +518,7 @@ uint16_t MC_Processor6502::Addr_ZEX()
 	uint16_t addr = (MemoryRead(m_registers.pc++) + m_registers.X) % 256;
 	return addr;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Addr_ZEY()
 //-----------------------------------------------------------------------------
 uint16_t MC_Processor6502::Addr_ZEY()
@@ -519,7 +526,7 @@ uint16_t MC_Processor6502::Addr_ZEY()
 	uint16_t addr = (MemoryRead(m_registers.pc++) + m_registers.Y) % 256;
 	return addr;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Addr_ABX()
 //-----------------------------------------------------------------------------
 uint16_t MC_Processor6502::Addr_ABX()
@@ -539,7 +546,7 @@ uint16_t MC_Processor6502::Addr_ABX()
 	}
 	return addr;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Addr_ABY()
 //-----------------------------------------------------------------------------
 uint16_t MC_Processor6502::Addr_ABY()
@@ -559,7 +566,7 @@ uint16_t MC_Processor6502::Addr_ABY()
 	}
 	return addr;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Addr_INX()
 //-----------------------------------------------------------------------------
 uint16_t MC_Processor6502::Addr_INX()
@@ -573,7 +580,7 @@ uint16_t MC_Processor6502::Addr_INX()
 	addr = MemoryRead(zeroL) + (MemoryRead(zeroH) << 8);
 	return addr;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Addr_INY()
 //-----------------------------------------------------------------------------
 uint16_t MC_Processor6502::Addr_INY()
@@ -593,7 +600,7 @@ uint16_t MC_Processor6502::Addr_INY()
 	}
 	return addr;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: StackPush(uint8_t byte)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::StackPush(uint8_t byte)
@@ -604,7 +611,7 @@ void MC_Processor6502::StackPush(uint8_t byte)
 
 	else m_registers.sp--;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: StackPop()
 //-----------------------------------------------------------------------------
 uint8_t MC_Processor6502::StackPop()
@@ -616,7 +623,7 @@ uint8_t MC_Processor6502::StackPop()
 
 	return MemoryRead(0x0100 + m_registers.sp);
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Exec(Instr& instr)
 //-----------------------------------------------------------------------------
 uint8_t MC_Processor6502::Exec(Instr& instr)
@@ -628,19 +635,20 @@ uint8_t MC_Processor6502::Exec(Instr& instr)
 	(this->*instr.Code)(src);
 	if (m_Clock.CanHaveExCycles) {
 		m_Clock.TotalCycles = m_Clock.Cycles + m_Clock.ExCycles;
-	} else {
+	}
+	else {
 		m_Clock.TotalCycles = m_Clock.Cycles;
 	}
 	return m_Clock.TotalCycles;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_ILLEGAL(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_ILLEGAL(uint16_t src)
 {
 	m_registers.IllegalOpcode = true;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_ADC(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_ADC(uint16_t src)
@@ -658,7 +666,8 @@ void MC_Processor6502::Op_ADC(uint16_t src)
 			tmp += 96;
 		}
 		SET_CARRY(tmp > 0x99);
-	} else {
+	}
+	else {
 		SET_NEGATIVE(tmp & 0x80);
 		SET_OVERFLOW(!((m_registers.A ^ m) & 0x80) && ((m_registers.A ^ tmp) & 0x80));
 		SET_CARRY(tmp > 0xFF);
@@ -666,7 +675,7 @@ void MC_Processor6502::Op_ADC(uint16_t src)
 	m_registers.A = tmp & 0xFF;
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_AND(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_AND(uint16_t src)
@@ -678,7 +687,7 @@ void MC_Processor6502::Op_AND(uint16_t src)
 	m_registers.A = res;
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_ASL(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_ASL(uint16_t src)
@@ -692,7 +701,7 @@ void MC_Processor6502::Op_ASL(uint16_t src)
 	MemoryWrite(src, m);
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_ASL_ACC(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_ASL_ACC(uint16_t src)
@@ -706,7 +715,7 @@ void MC_Processor6502::Op_ASL_ACC(uint16_t src)
 	m_registers.A = m;
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_BCC(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_BCC(uint16_t src)
@@ -723,7 +732,7 @@ void MC_Processor6502::Op_BCC(uint16_t src)
 	}
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_BCS(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_BCS(uint16_t src)
@@ -740,7 +749,7 @@ void MC_Processor6502::Op_BCS(uint16_t src)
 	}
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_BEQ(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_BEQ(uint16_t src)
@@ -757,7 +766,7 @@ void MC_Processor6502::Op_BEQ(uint16_t src)
 	}
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_BIT(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_BIT(uint16_t src)
@@ -769,7 +778,7 @@ void MC_Processor6502::Op_BIT(uint16_t src)
 	SET_ZERO(!res);
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_BMI(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_BMI(uint16_t src)
@@ -786,7 +795,7 @@ void MC_Processor6502::Op_BMI(uint16_t src)
 	}
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name Op_BNE(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_BNE(uint16_t src)
@@ -803,7 +812,7 @@ void MC_Processor6502::Op_BNE(uint16_t src)
 	}
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_BPL(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_BPL(uint16_t src)
@@ -820,7 +829,7 @@ void MC_Processor6502::Op_BPL(uint16_t src)
 	}
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_BRK(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_BRK(uint16_t src)
@@ -833,7 +842,7 @@ void MC_Processor6502::Op_BRK(uint16_t src)
 	m_registers.pc = (MemoryRead(s_irqVectorH) << 8) + MemoryRead(s_irqVectorL);
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_BVC(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_BVC(uint16_t src)
@@ -850,7 +859,7 @@ void MC_Processor6502::Op_BVC(uint16_t src)
 	}
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_BVS(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_BVS(uint16_t src)
@@ -867,7 +876,7 @@ void MC_Processor6502::Op_BVS(uint16_t src)
 	}
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_CLC(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_CLC(uint16_t src)
@@ -875,7 +884,7 @@ void MC_Processor6502::Op_CLC(uint16_t src)
 	SET_CARRY(0);
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_CLD(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_CLD(uint16_t src)
@@ -883,7 +892,7 @@ void MC_Processor6502::Op_CLD(uint16_t src)
 	SET_DECIMAL(0);
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_CLI(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_CLI(uint16_t src)
@@ -891,7 +900,7 @@ void MC_Processor6502::Op_CLI(uint16_t src)
 	SET_INTERRUPT(0);
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_CLV(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_CLV(uint16_t src)
@@ -899,7 +908,7 @@ void MC_Processor6502::Op_CLV(uint16_t src)
 	SET_OVERFLOW(0);
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_CMP(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_CMP(uint16_t src)
@@ -910,7 +919,7 @@ void MC_Processor6502::Op_CMP(uint16_t src)
 	SET_ZERO(!(tmp & 0xFF));
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_CPX(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_CPX(uint16_t src)
@@ -921,7 +930,7 @@ void MC_Processor6502::Op_CPX(uint16_t src)
 	SET_ZERO(!(tmp & 0xFF));
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_CPY(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_CPY(uint16_t src)
@@ -932,7 +941,7 @@ void MC_Processor6502::Op_CPY(uint16_t src)
 	SET_ZERO(!(tmp & 0xFF));
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_DEC(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_DEC(uint16_t src)
@@ -944,7 +953,7 @@ void MC_Processor6502::Op_DEC(uint16_t src)
 	MemoryWrite(src, m);
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_DEX(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_DEX(uint16_t src)
@@ -956,7 +965,7 @@ void MC_Processor6502::Op_DEX(uint16_t src)
 	m_registers.X = m;
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_DEY(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_DEY(uint16_t src)
@@ -968,7 +977,7 @@ void MC_Processor6502::Op_DEY(uint16_t src)
 	m_registers.Y = m;
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_EOR(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_EOR(uint16_t src)
@@ -979,7 +988,7 @@ void MC_Processor6502::Op_EOR(uint16_t src)
 	SET_ZERO(!m);
 	m_registers.A = m;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_INC(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_INC(uint16_t src)
@@ -990,7 +999,7 @@ void MC_Processor6502::Op_INC(uint16_t src)
 	SET_ZERO(!m);
 	MemoryWrite(src, m);
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_INX(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_INX(uint16_t src)
@@ -1001,7 +1010,7 @@ void MC_Processor6502::Op_INX(uint16_t src)
 	SET_ZERO(!m);
 	m_registers.X = m;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_INY(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_INY(uint16_t src)
@@ -1012,14 +1021,14 @@ void MC_Processor6502::Op_INY(uint16_t src)
 	SET_ZERO(!m);
 	m_registers.Y = m;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_JMP(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_JMP(uint16_t src)
 {
 	m_registers.pc = src;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_JSR(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_JSR(uint16_t src)
@@ -1029,7 +1038,7 @@ void MC_Processor6502::Op_JSR(uint16_t src)
 	StackPush(m_registers.pc & 0xFF);
 	m_registers.pc = src;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_LDA(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_LDA(uint16_t src)
@@ -1039,7 +1048,7 @@ void MC_Processor6502::Op_LDA(uint16_t src)
 	SET_ZERO(!m);
 	m_registers.A = m;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_LDX(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_LDX(uint16_t src)
@@ -1049,7 +1058,7 @@ void MC_Processor6502::Op_LDX(uint16_t src)
 	SET_ZERO(!m);
 	m_registers.X = m;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_LDY(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_LDY(uint16_t src)
@@ -1059,7 +1068,7 @@ void MC_Processor6502::Op_LDY(uint16_t src)
 	SET_ZERO(!m);
 	m_registers.Y = m;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_LSR(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_LSR(uint16_t src)
@@ -1071,7 +1080,7 @@ void MC_Processor6502::Op_LSR(uint16_t src)
 	SET_ZERO(!m);
 	MemoryWrite(src, m);
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_LSR_ACC(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_LSR_ACC(uint16_t src)
@@ -1083,14 +1092,14 @@ void MC_Processor6502::Op_LSR_ACC(uint16_t src)
 	SET_ZERO(!m);
 	m_registers.A = m;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_NOP(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_NOP(uint16_t src)
 {
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_ORA(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_ORA(uint16_t src)
@@ -1101,7 +1110,7 @@ void MC_Processor6502::Op_ORA(uint16_t src)
 	SET_ZERO(!m);
 	m_registers.A = m;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_PHA(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_PHA(uint16_t src)
@@ -1109,7 +1118,7 @@ void MC_Processor6502::Op_PHA(uint16_t src)
 	StackPush(m_registers.A);
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_PHP(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_PHP(uint16_t src)
@@ -1117,7 +1126,7 @@ void MC_Processor6502::Op_PHP(uint16_t src)
 	StackPush(m_registers.status | FLAGBREAK);
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_PLA(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_PLA(uint16_t src)
@@ -1127,7 +1136,7 @@ void MC_Processor6502::Op_PLA(uint16_t src)
 	SET_ZERO(!m_registers.A);
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_PLP(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_PLP(uint16_t src)
@@ -1136,7 +1145,7 @@ void MC_Processor6502::Op_PLP(uint16_t src)
 	SET_CONSTANT(1);
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_ROL(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_ROL(uint16_t src)
@@ -1153,7 +1162,7 @@ void MC_Processor6502::Op_ROL(uint16_t src)
 	MemoryWrite(src, (uint8_t)m);
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_ROL_ACC(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_ROL_ACC(uint16_t src)
@@ -1170,7 +1179,7 @@ void MC_Processor6502::Op_ROL_ACC(uint16_t src)
 	m_registers.A = (uint8_t)m;
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_ROR(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_ROR(uint16_t src)
@@ -1187,7 +1196,7 @@ void MC_Processor6502::Op_ROR(uint16_t src)
 	MemoryWrite(src, (uint8_t)m);
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_ROR_ACC(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_ROR_ACC(uint16_t src)
@@ -1204,7 +1213,7 @@ void MC_Processor6502::Op_ROR_ACC(uint16_t src)
 	m_registers.A = (uint8_t)m;
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_RTI(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_RTI(uint16_t src)
@@ -1217,7 +1226,7 @@ void MC_Processor6502::Op_RTI(uint16_t src)
 	m_registers.pc = (hi << 8) | lo;
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_RTS(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_RTS(uint16_t src)
@@ -1229,7 +1238,7 @@ void MC_Processor6502::Op_RTS(uint16_t src)
 	m_registers.pc = ((hi << 8) | lo) + 1;
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_SBC(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_SBC(uint16_t src)
@@ -1251,7 +1260,7 @@ void MC_Processor6502::Op_SBC(uint16_t src)
 	m_registers.A = (tmp & 0xFF);
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_SEC(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_SEC(uint16_t src)
@@ -1259,7 +1268,7 @@ void MC_Processor6502::Op_SEC(uint16_t src)
 	SET_CARRY(1);
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_SED(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_SED(uint16_t src)
@@ -1267,7 +1276,7 @@ void MC_Processor6502::Op_SED(uint16_t src)
 	SET_DECIMAL(1);
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_SEI(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_SEI(uint16_t src)
@@ -1275,7 +1284,7 @@ void MC_Processor6502::Op_SEI(uint16_t src)
 	SET_INTERRUPT(1);
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_STA(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_STA(uint16_t src)
@@ -1283,7 +1292,7 @@ void MC_Processor6502::Op_STA(uint16_t src)
 	MemoryWrite(src, m_registers.A);
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_STX(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_STX(uint16_t src)
@@ -1291,7 +1300,7 @@ void MC_Processor6502::Op_STX(uint16_t src)
 	MemoryWrite(src, m_registers.X);
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_STY(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_STY(uint16_t src)
@@ -1299,7 +1308,7 @@ void MC_Processor6502::Op_STY(uint16_t src)
 	MemoryWrite(src, m_registers.Y);
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_TAX(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_TAX(uint16_t src)
@@ -1310,7 +1319,7 @@ void MC_Processor6502::Op_TAX(uint16_t src)
 	m_registers.X = m;
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_TAY(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_TAY(uint16_t src)
@@ -1321,7 +1330,7 @@ void MC_Processor6502::Op_TAY(uint16_t src)
 	m_registers.Y = m;
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_TSX(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_TSX(uint16_t src)
@@ -1332,7 +1341,7 @@ void MC_Processor6502::Op_TSX(uint16_t src)
 	m_registers.X = m;
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_TXA(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_TXA(uint16_t src)
@@ -1343,7 +1352,7 @@ void MC_Processor6502::Op_TXA(uint16_t src)
 	m_registers.A = m;
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_TXS(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_TXS(uint16_t src)
@@ -1351,7 +1360,7 @@ void MC_Processor6502::Op_TXS(uint16_t src)
 	m_registers.sp = m_registers.X;
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Op_TYA(uint16_t src)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Op_TYA(uint16_t src)
@@ -1362,7 +1371,7 @@ void MC_Processor6502::Op_TYA(uint16_t src)
 	m_registers.A = m;
 	return;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: Disassemble(char *output, size_t outputsize, uint8_t *buffer, uint16_t *pc)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::Disassemble(char* output, size_t outputsize, uint8_t* buffer, uint16_t* pc)
@@ -1381,7 +1390,8 @@ void MC_Processor6502::Disassemble(char* output, size_t outputsize, uint8_t* buf
 	output[0] = '\0';
 	if (m_InstrTbl[opcode].Mnemonic != nullptr && m_InstrTbl[opcode].AddressingMode != ILLEGAL) {
 		entry = opcode;
-	} else {
+	}
+	else {
 		snprintf(opcode_repr, sizeof(opcode_repr), ".byte $%02X", opcode);
 		snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X ", current_addr, opcode);
 		snprintf(output, outputsize, "%-16s%-16s  INVALID OPCODE", hex_dump, opcode_repr);
@@ -1390,103 +1400,104 @@ void MC_Processor6502::Disassemble(char* output, size_t outputsize, uint8_t* buf
 	mnemonic = m_InstrTbl[entry].Mnemonic;
 	snprintf(hex_dump, sizeof(hex_dump), "$%04X", current_addr);
 	switch (m_InstrTbl[entry].AddressingMode) {
-		case IMMED:
-			byte_operand = buffer[*pc + 1];
-			*pc += 1;
-			snprintf(opcode_repr, sizeof(opcode_repr), "%s #$%02X", mnemonic, byte_operand);
-			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
-			break;
-		case ABSOL:
-			word_operand = LOAD_WORD(buffer, *pc);
-			*pc += 2;
-			snprintf(opcode_repr, sizeof(opcode_repr), "%s $%02X%02X", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
-			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
-			break;
-		case ZEROP:
-			byte_operand = buffer[*pc + 1];
-			*pc += 1;
-			snprintf(opcode_repr, sizeof(opcode_repr), "%s $%02X", mnemonic, byte_operand);
-			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
-			break;
-		case IMPLI:
-			snprintf(opcode_repr, sizeof(opcode_repr), "%s", mnemonic);
-			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X ", current_addr, opcode);
-			break;
-		case INDIA:
-			word_operand = LOAD_WORD(buffer, *pc);
-			*pc += 2;
-			snprintf(opcode_repr, sizeof(opcode_repr), "%s ($%02X%02X)", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
-			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
-			break;
-		case ABSIX:
-			word_operand = LOAD_WORD(buffer, *pc);
-			*pc += 2;
-			snprintf(opcode_repr, sizeof(opcode_repr), "%s $%02X%02X,X", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
-			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
-			break;
-		case ABSIY:
-			word_operand = LOAD_WORD(buffer, *pc);
-			*pc += 2;
-			snprintf(opcode_repr, sizeof(opcode_repr), "%s $%02X%02X,Y", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
-			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
-			break;
-		case ZEPIX:
-			byte_operand = buffer[*pc + 1];
-			*pc += 1;
-			snprintf(opcode_repr, sizeof(opcode_repr), "%s $%02X,X", mnemonic, byte_operand);
-			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
-			break;
-		case ZEPIY:
-			byte_operand = buffer[*pc + 1];
-			*pc += 1;
-			snprintf(opcode_repr, sizeof(opcode_repr), "%s $%02X,Y", mnemonic, byte_operand);
-			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
-			break;
-		case INDIN:
-			byte_operand = buffer[*pc + 1];
-			*pc += 1;
-			snprintf(opcode_repr, sizeof(opcode_repr), "%s ($%02X,X)", mnemonic, byte_operand);
-			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
-			break;
-		case ININD:
-			byte_operand = buffer[*pc + 1];
-			*pc += 1;
-			snprintf(opcode_repr, sizeof(opcode_repr), "%s ($%02X),Y", mnemonic, byte_operand);
-			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
-			break;
-		case RELAT:
-			byte_operand = buffer[*pc + 1];
-			*pc += 1;
-			word_operand = current_addr + 2;
-			if (byte_operand > 0x7Fu) {
-				word_operand -= ((~byte_operand & 0x7Fu) + 1);
-			} else {
-				word_operand += byte_operand & 0x7Fu;
-			}
-			snprintf(opcode_repr, sizeof(opcode_repr), "%s $%04X", mnemonic, word_operand);
-			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
-			break;
-		case ACCUM:
-			snprintf(opcode_repr, sizeof(opcode_repr), "%s A", mnemonic);
-			snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X ", current_addr, opcode);
-			break;
-		default:
-			// Will not happen since each entry in opcode_table has address mode set
-			break;
+	case IMMED:
+		byte_operand = buffer[*pc + 1];
+		*pc += 1;
+		snprintf(opcode_repr, sizeof(opcode_repr), "%s #$%02X", mnemonic, byte_operand);
+		snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+		break;
+	case ABSOL:
+		word_operand = LOAD_WORD(buffer, *pc);
+		*pc += 2;
+		snprintf(opcode_repr, sizeof(opcode_repr), "%s $%02X%02X", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
+		snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
+		break;
+	case ZEROP:
+		byte_operand = buffer[*pc + 1];
+		*pc += 1;
+		snprintf(opcode_repr, sizeof(opcode_repr), "%s $%02X", mnemonic, byte_operand);
+		snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+		break;
+	case IMPLI:
+		snprintf(opcode_repr, sizeof(opcode_repr), "%s", mnemonic);
+		snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X ", current_addr, opcode);
+		break;
+	case INDIA:
+		word_operand = LOAD_WORD(buffer, *pc);
+		*pc += 2;
+		snprintf(opcode_repr, sizeof(opcode_repr), "%s ($%02X%02X)", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
+		snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
+		break;
+	case ABSIX:
+		word_operand = LOAD_WORD(buffer, *pc);
+		*pc += 2;
+		snprintf(opcode_repr, sizeof(opcode_repr), "%s $%02X%02X,X", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
+		snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
+		break;
+	case ABSIY:
+		word_operand = LOAD_WORD(buffer, *pc);
+		*pc += 2;
+		snprintf(opcode_repr, sizeof(opcode_repr), "%s $%02X%02X,Y", mnemonic, HIGH_PART(word_operand), LOW_PART(word_operand));
+		snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X%02X ", current_addr, opcode, LOW_PART(word_operand), HIGH_PART(word_operand));
+		break;
+	case ZEPIX:
+		byte_operand = buffer[*pc + 1];
+		*pc += 1;
+		snprintf(opcode_repr, sizeof(opcode_repr), "%s $%02X,X", mnemonic, byte_operand);
+		snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+		break;
+	case ZEPIY:
+		byte_operand = buffer[*pc + 1];
+		*pc += 1;
+		snprintf(opcode_repr, sizeof(opcode_repr), "%s $%02X,Y", mnemonic, byte_operand);
+		snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+		break;
+	case INDIN:
+		byte_operand = buffer[*pc + 1];
+		*pc += 1;
+		snprintf(opcode_repr, sizeof(opcode_repr), "%s ($%02X,X)", mnemonic, byte_operand);
+		snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+		break;
+	case ININD:
+		byte_operand = buffer[*pc + 1];
+		*pc += 1;
+		snprintf(opcode_repr, sizeof(opcode_repr), "%s ($%02X),Y", mnemonic, byte_operand);
+		snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+		break;
+	case RELAT:
+		byte_operand = buffer[*pc + 1];
+		*pc += 1;
+		word_operand = current_addr + 2;
+		if (byte_operand > 0x7Fu) {
+			word_operand -= ((~byte_operand & 0x7Fu) + 1);
+		}
+		else {
+			word_operand += byte_operand & 0x7Fu;
+		}
+		snprintf(opcode_repr, sizeof(opcode_repr), "%s $%04X", mnemonic, word_operand);
+		snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X %02X ", current_addr, opcode, byte_operand);
+		break;
+	case ACCUM:
+		snprintf(opcode_repr, sizeof(opcode_repr), "%s A", mnemonic);
+		snprintf(hex_dump, sizeof(hex_dump), "$%04X  %02X ", current_addr, opcode);
+		break;
+	default:
+		// Will not happen since each entry in opcode_table has address mode set
+		break;
 	}
 	len = snprintf(output, outputsize, "%-16s%-16s ", hex_dump, opcode_repr);
 	output += len;
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: :PrintByteAsBits(char val)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::PrintByteAsBits(char val)
 {
 	for (int i = 7; 0 <= i; i--) {
-		printf("%c", (val & (1 << i)) ? StatusBits[i] : '.');
+		printf("%c", (val & (1 << i)) ? m_StatusBits[i] : '.');
 	}
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: PrintBits(const char* ty, const char* val, unsigned char* bytes, size_t num_bytes)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::PrintBits(const char* ty, const char* val, unsigned char* bytes, size_t num_bytes)
@@ -1498,7 +1509,7 @@ void MC_Processor6502::PrintBits(const char* ty, const char* val, unsigned char*
 	}
 	printf("]\r\n");
 }
-//-Protected-------------------------------------------------------------------
+//-Private---------------------------------------------------------------------
 // Name: PrintHexDump16Bit(const char* desc, void* addr, long len, long offset)
 //-----------------------------------------------------------------------------
 void MC_Processor6502::PrintHexDump16Bit(const char* desc, void* addr, long len, long offset)
@@ -1514,7 +1525,8 @@ void MC_Processor6502::PrintHexDump16Bit(const char* desc, void* addr, long len,
 	if (len == 0) {
 		printf("\nZERO LENGTH\r\n");
 		return;
-	} else if (len < 0) {
+	}
+	else if (len < 0) {
 		printf("\nNEGATIVE LENGTH: %ld\r\n", len);
 		return;
 	}
@@ -1551,3 +1563,27 @@ void MC_Processor6502::PrintHexDump16Bit(const char* desc, void* addr, long len,
 	printf("  | %s |\r\n", buff);
 	printf("-----  ------------------------------------------------\r\n");
 }
+
+//*****************************************************************************
+// Protected Code
+//*****************************************************************************
+
+//-Protected-------------------------------------------------------------------
+// Name:
+//-----------------------------------------------------------------------------
+
+//*****************************************************************************
+// Private CallBack
+//*****************************************************************************
+
+//-Private CallBack------------------------------------------------------------
+// Name:
+//-----------------------------------------------------------------------------
+
+//*****************************************************************************
+// Private Task
+//*****************************************************************************
+
+//-Private Task----------------------------------------------------------------
+// Name:
+//-----------------------------------------------------------------------------
