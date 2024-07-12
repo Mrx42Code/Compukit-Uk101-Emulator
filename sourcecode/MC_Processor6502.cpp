@@ -8,11 +8,11 @@
 // Copyright (c) 1998-2014 Tennessee Carmel-Veilleux <veilleux@tentech.ca>
 // https://github.com/tcarmelveilleux/dcc6502
 //
-// Copyright(c) 2023 Mrx42Code
+// Copyright(c) 2024 Mrx42Code
 // https://github.com/Mrx42Code/Compukit-Uk101-Emulator
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this softwareand associated documentation files(the "Software"), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
@@ -76,6 +76,7 @@ const char m_StatusBits[8] = { 'C', 'Z' , 'I' , 'D', 'B', '-', 'O', 'N' };
 // Name: MC_Processor6502()
 // Desc: MC_Processor6502 class
 //-----------------------------------------------------------------------------
+/** @brief MC_Processor6502 @note Public @param None @retval None */
 MC_Processor6502::MC_Processor6502()
 {
 	Initialize();
@@ -84,6 +85,7 @@ MC_Processor6502::MC_Processor6502()
 // Name: mos6502(BusRead r, BusWrite w)
 // Desc: MC_Processor6502 class
 //-----------------------------------------------------------------------------
+/** @brief MC_Processor6502 @note Public @param r @param w @retval None */
 MC_Processor6502::MC_Processor6502(BusRead r, BusWrite w)
 {
 	Initialize();
@@ -252,13 +254,14 @@ MC_Processor6502::MC_Processor6502(BusRead r, BusWrite w)
 // Name: ~MC_Processor6502()
 // Desc: ~MC_Processor6502 Destruction class
 //-----------------------------------------------------------------------------
+/** @brief ~MC_Processor6502 @note Public @param None @retval None */
 MC_Processor6502::~MC_Processor6502()
 {
-
 }
 //-Public----------------------------------------------------------------------
 // Name: NMI()
 //-----------------------------------------------------------------------------
+/** @brief NMI @note Public @param None @retval None */
 void MC_Processor6502::NMI()
 {
 	SET_BREAK(0);
@@ -272,6 +275,7 @@ void MC_Processor6502::NMI()
 //-Public----------------------------------------------------------------------
 // Name: IRQ()
 //-----------------------------------------------------------------------------
+/** @brief IRQ @note Public @param None @retval None */
 void MC_Processor6502::IRQ()
 {
 	if (!IF_INTERRUPT()) {
@@ -287,6 +291,7 @@ void MC_Processor6502::IRQ()
 //-Public----------------------------------------------------------------------
 // Name: Reset()
 //-----------------------------------------------------------------------------
+/** @brief Reset @note Public @param None @retval None */
 void MC_Processor6502::Reset()
 {
 	memset(&m_CrashDump, 0, sizeof(m_CrashDump));
@@ -305,6 +310,7 @@ void MC_Processor6502::Reset()
 //-Public----------------------------------------------------------------------
 // Name: GetPC()
 //-----------------------------------------------------------------------------
+/** @brief GetPC @note Public @param None @retval uint16_t PC */
 uint16_t MC_Processor6502::GetPC()
 {
 	return m_registers.pc;
@@ -312,6 +318,7 @@ uint16_t MC_Processor6502::GetPC()
 //-Public----------------------------------------------------------------------
 // Name: SetPC(uint16_t PC)
 //-----------------------------------------------------------------------------
+/** @brief SetPC @note Public @param PC @retval None */
 void MC_Processor6502::SetPC(uint16_t PC)
 {
 	m_registers.pc = PC;
@@ -319,6 +326,7 @@ void MC_Processor6502::SetPC(uint16_t PC)
 //-Public----------------------------------------------------------------------
 // Name: GetRegisters()
 //-----------------------------------------------------------------------------
+/** @brief GetRegisters @note Public @param None @retval Registers6502 */
 Registers6502 MC_Processor6502::GetRegisters()
 {
 	return m_registers;
@@ -326,6 +334,7 @@ Registers6502 MC_Processor6502::GetRegisters()
 //-Public----------------------------------------------------------------------
 // Name: SetRegisters(Registers6502 Registers)
 //-----------------------------------------------------------------------------
+/** @brief SetRegisters @note Public @param Registers @retval None */
 void MC_Processor6502::SetRegisters(Registers6502 Registers)
 {
 	m_registers = Registers;
@@ -333,6 +342,7 @@ void MC_Processor6502::SetRegisters(Registers6502 Registers)
 //-Public----------------------------------------------------------------------
 // Name: RunOneOp()
 //-----------------------------------------------------------------------------
+/** @brief RunOneOp @note Public @param None @retval bool */
 bool MC_Processor6502::RunOneOp()
 {
 	if (!m_registers.IllegalOpcode) {
@@ -358,6 +368,7 @@ bool MC_Processor6502::RunOneOp()
 //-Public----------------------------------------------------------------------
 // Name: RunCode(int32_t cyclesRemaining, uint64_t& cycleCount, CycleMethod cycleMethod)
 //-----------------------------------------------------------------------------
+/** @brief RunCode @note Public @param cyclesRemaining @param cycleCount @param cycleMethod @retval None */
 void MC_Processor6502::RunCode(int32_t cyclesRemaining, uint64_t& cycleCount, CycleMethod cycleMethod)
 {
 	uint8_t Cycle;
@@ -373,6 +384,7 @@ void MC_Processor6502::RunCode(int32_t cyclesRemaining, uint64_t& cycleCount, Cy
 //-Public----------------------------------------------------------------------
 // Name: DebugInfo(uint8_t * MemoryMap)
 //-----------------------------------------------------------------------------
+/** @brief DebugInfo @note Public @param MemoryMap @retval None */
 void MC_Processor6502::DebugInfo(uint8_t* MemoryMap)
 {
 	char tmpstr[DebugLineLen];
@@ -384,6 +396,7 @@ void MC_Processor6502::DebugInfo(uint8_t* MemoryMap)
 //-Public----------------------------------------------------------------------
 // Name: DebugCrashInfo(uint8_t* MemoryMap)
 //-----------------------------------------------------------------------------
+/** @brief DebugCrashInfo @note Public @param MemoryMap @retval None */
 void MC_Processor6502::DebugCrashInfo(uint8_t* MemoryMap)
 {
 	uint16_t index;
@@ -417,6 +430,7 @@ void MC_Processor6502::DebugCrashInfo(uint8_t* MemoryMap)
 //-Private---------------------------------------------------------------------
 // Name: Initialize()
 //-----------------------------------------------------------------------------
+/** @brief Initialize @note Private @param None @retval None */
 void MC_Processor6502::Initialize()
 {
 	memset(&m_Instruction, 0, sizeof(m_Instruction));
@@ -432,6 +446,7 @@ void MC_Processor6502::Initialize()
 //-Private---------------------------------------------------------------------
 // Name: Addr_ACC()
 //-----------------------------------------------------------------------------
+/** @brief Addr_ACC @note Private @param None @retval uint16_t */
 uint16_t MC_Processor6502::Addr_ACC()
 {
 	return 0;																	// not used
@@ -439,6 +454,7 @@ uint16_t MC_Processor6502::Addr_ACC()
 //-Private---------------------------------------------------------------------
 // Name: Addr_IMM()
 //-----------------------------------------------------------------------------
+/** @brief Addr_IMM @note Private @param None @retval uint16_t */
 uint16_t MC_Processor6502::Addr_IMM()
 {
 	return m_registers.pc++;
@@ -446,6 +462,7 @@ uint16_t MC_Processor6502::Addr_IMM()
 //-Private---------------------------------------------------------------------
 // Name: Addr_ABS()
 //-----------------------------------------------------------------------------
+/** @brief Addr_ABS @note Private @param None @retval uint16_t */
 uint16_t MC_Processor6502::Addr_ABS()
 {
 	uint16_t addrL;
@@ -460,6 +477,7 @@ uint16_t MC_Processor6502::Addr_ABS()
 //-Private---------------------------------------------------------------------
 // Name: Addr_ZER()
 //-----------------------------------------------------------------------------
+/** @brief Addr_ZER @note Private @param None @retval uint16_t */
 uint16_t MC_Processor6502::Addr_ZER()
 {
 	return MemoryRead(m_registers.pc++);
@@ -467,6 +485,7 @@ uint16_t MC_Processor6502::Addr_ZER()
 //-Private---------------------------------------------------------------------
 // Name: Addr_IMP()
 //-----------------------------------------------------------------------------
+/** @brief Addr_IMP @note Private @param None @retval uint16_t */
 uint16_t MC_Processor6502::Addr_IMP()
 {
 	return 0;																	// not used
@@ -474,6 +493,7 @@ uint16_t MC_Processor6502::Addr_IMP()
 //-Private---------------------------------------------------------------------
 // Name: Addr_REL()
 //-----------------------------------------------------------------------------
+/** @brief Addr_REL @note Private @param None @retval uint16_t */
 uint16_t MC_Processor6502::Addr_REL()
 {
 	uint16_t offset;
@@ -489,6 +509,7 @@ uint16_t MC_Processor6502::Addr_REL()
 //-Private---------------------------------------------------------------------
 // Name: Addr_ABI()
 //-----------------------------------------------------------------------------
+/** @brief Addr_ABI @note Private @param None @retval uint16_t */
 uint16_t MC_Processor6502::Addr_ABI()
 {
 	uint16_t addrL;
@@ -513,6 +534,7 @@ uint16_t MC_Processor6502::Addr_ABI()
 //-Private---------------------------------------------------------------------
 // Name: Addr_ZEX()
 //-----------------------------------------------------------------------------
+/** @brief Addr_ZEX @note Private @param None @retval uint16_t */
 uint16_t MC_Processor6502::Addr_ZEX()
 {
 	uint16_t addr = (MemoryRead(m_registers.pc++) + m_registers.X) % 256;
@@ -521,6 +543,7 @@ uint16_t MC_Processor6502::Addr_ZEX()
 //-Private---------------------------------------------------------------------
 // Name: Addr_ZEY()
 //-----------------------------------------------------------------------------
+/** @brief Addr_ZEY @note Private @param None @retval uint16_t */
 uint16_t MC_Processor6502::Addr_ZEY()
 {
 	uint16_t addr = (MemoryRead(m_registers.pc++) + m_registers.Y) % 256;
@@ -529,6 +552,7 @@ uint16_t MC_Processor6502::Addr_ZEY()
 //-Private---------------------------------------------------------------------
 // Name: Addr_ABX()
 //-----------------------------------------------------------------------------
+/** @brief Addr_ABX @note Private @param None @retval uint16_t */
 uint16_t MC_Processor6502::Addr_ABX()
 {
 	uint16_t addr;
@@ -549,6 +573,7 @@ uint16_t MC_Processor6502::Addr_ABX()
 //-Private---------------------------------------------------------------------
 // Name: Addr_ABY()
 //-----------------------------------------------------------------------------
+/** @brief Addr_ABY @note Private @param None @retval uint16_t */
 uint16_t MC_Processor6502::Addr_ABY()
 {
 	uint16_t addr;
@@ -569,6 +594,7 @@ uint16_t MC_Processor6502::Addr_ABY()
 //-Private---------------------------------------------------------------------
 // Name: Addr_INX()
 //-----------------------------------------------------------------------------
+/** @brief Addr_INX @note Private @param None @retval uint16_t */
 uint16_t MC_Processor6502::Addr_INX()
 {
 	uint16_t zeroL;
@@ -583,6 +609,7 @@ uint16_t MC_Processor6502::Addr_INX()
 //-Private---------------------------------------------------------------------
 // Name: Addr_INY()
 //-----------------------------------------------------------------------------
+/** @brief Addr_INY @note Private @param None @retval uint16_t */
 uint16_t MC_Processor6502::Addr_INY()
 {
 	uint16_t zeroL;
@@ -603,6 +630,7 @@ uint16_t MC_Processor6502::Addr_INY()
 //-Private---------------------------------------------------------------------
 // Name: StackPush(uint8_t byte)
 //-----------------------------------------------------------------------------
+/** @brief StackPush @note Private @param byte @retval None */
 void MC_Processor6502::StackPush(uint8_t byte)
 {
 	MemoryWrite(0x0100 + m_registers.sp, byte);
@@ -614,6 +642,7 @@ void MC_Processor6502::StackPush(uint8_t byte)
 //-Private---------------------------------------------------------------------
 // Name: StackPop()
 //-----------------------------------------------------------------------------
+/** @brief StackPop @note Private @param None @retval uint8_t */
 uint8_t MC_Processor6502::StackPop()
 {
 	if (m_registers.sp == 0xFF)
@@ -626,6 +655,7 @@ uint8_t MC_Processor6502::StackPop()
 //-Private---------------------------------------------------------------------
 // Name: Exec(Instr& instr)
 //-----------------------------------------------------------------------------
+/** @brief Exec @note Private @param instr @retval uint8_t */
 uint8_t MC_Processor6502::Exec(Instr& instr)
 {
 	m_Clock.CanHaveExCycles = instr.CanHaveExCycles;
@@ -644,6 +674,7 @@ uint8_t MC_Processor6502::Exec(Instr& instr)
 //-Private---------------------------------------------------------------------
 // Name: Op_ILLEGAL(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_ILLEGAL @note Private @param src @retval None */
 void MC_Processor6502::Op_ILLEGAL(uint16_t src)
 {
 	m_registers.IllegalOpcode = true;
@@ -651,6 +682,7 @@ void MC_Processor6502::Op_ILLEGAL(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_ADC(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_ADC @note Private @param src @retval None */
 void MC_Processor6502::Op_ADC(uint16_t src)
 {
 	uint8_t m = MemoryRead(src);
@@ -678,6 +710,7 @@ void MC_Processor6502::Op_ADC(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_AND(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_AND @note Private @param src @retval None */
 void MC_Processor6502::Op_AND(uint16_t src)
 {
 	uint8_t m = MemoryRead(src);
@@ -690,6 +723,7 @@ void MC_Processor6502::Op_AND(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_ASL(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_ASL @note Private @param src @retval None */
 void MC_Processor6502::Op_ASL(uint16_t src)
 {
 	uint8_t m = MemoryRead(src);
@@ -704,6 +738,7 @@ void MC_Processor6502::Op_ASL(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_ASL_ACC(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_ASL_ACC @note Private @param src @retval None */
 void MC_Processor6502::Op_ASL_ACC(uint16_t src)
 {
 	uint8_t m = m_registers.A;
@@ -718,6 +753,7 @@ void MC_Processor6502::Op_ASL_ACC(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_BCC(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_BCC @note Private @param src @retval None */
 void MC_Processor6502::Op_BCC(uint16_t src)
 {
 	if (!IF_CARRY()) {
@@ -735,6 +771,7 @@ void MC_Processor6502::Op_BCC(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_BCS(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_BCS @note Private @param src @retval None */
 void MC_Processor6502::Op_BCS(uint16_t src)
 {
 	if (IF_CARRY()) {
@@ -752,6 +789,7 @@ void MC_Processor6502::Op_BCS(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_BEQ(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_BEQ @note Private @param src @retval None */
 void MC_Processor6502::Op_BEQ(uint16_t src)
 {
 	if (IF_ZERO()) {
@@ -769,6 +807,7 @@ void MC_Processor6502::Op_BEQ(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_BIT(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_BIT @note Private @param src @retval None */
 void MC_Processor6502::Op_BIT(uint16_t src)
 {
 	uint8_t m = MemoryRead(src);
@@ -781,6 +820,7 @@ void MC_Processor6502::Op_BIT(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_BMI(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_BMI @note Private @param src @retval None */
 void MC_Processor6502::Op_BMI(uint16_t src)
 {
 	if (IF_NEGATIVE()) {
@@ -798,6 +838,7 @@ void MC_Processor6502::Op_BMI(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name Op_BNE(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_BNE @note Private @param src @retval None */
 void MC_Processor6502::Op_BNE(uint16_t src)
 {
 	if (!IF_ZERO()) {
@@ -815,6 +856,7 @@ void MC_Processor6502::Op_BNE(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_BPL(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_BPL @note Private @param src @retval None */
 void MC_Processor6502::Op_BPL(uint16_t src)
 {
 	if (!IF_NEGATIVE()) {
@@ -832,6 +874,7 @@ void MC_Processor6502::Op_BPL(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_BRK(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_BRK @note Private @param src @retval None */
 void MC_Processor6502::Op_BRK(uint16_t src)
 {
 	m_registers.pc++;
@@ -845,6 +888,7 @@ void MC_Processor6502::Op_BRK(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_BVC(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_BVC @note Private @param src @retval None */
 void MC_Processor6502::Op_BVC(uint16_t src)
 {
 	if (!IF_OVERFLOW()) {
@@ -862,6 +906,7 @@ void MC_Processor6502::Op_BVC(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_BVS(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_BVS @note Private @param src @retval None */
 void MC_Processor6502::Op_BVS(uint16_t src)
 {
 	if (IF_OVERFLOW()) {
@@ -879,6 +924,7 @@ void MC_Processor6502::Op_BVS(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_CLC(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_CLC @note Private @param src @retval None */
 void MC_Processor6502::Op_CLC(uint16_t src)
 {
 	SET_CARRY(0);
@@ -887,6 +933,7 @@ void MC_Processor6502::Op_CLC(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_CLD(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_CLD @note Private @param src @retval None */
 void MC_Processor6502::Op_CLD(uint16_t src)
 {
 	SET_DECIMAL(0);
@@ -895,6 +942,7 @@ void MC_Processor6502::Op_CLD(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_CLI(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_CLI @note Private @param src @retval None */
 void MC_Processor6502::Op_CLI(uint16_t src)
 {
 	SET_INTERRUPT(0);
@@ -903,6 +951,7 @@ void MC_Processor6502::Op_CLI(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_CLV(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_CLV @note Private @param src @retval None */
 void MC_Processor6502::Op_CLV(uint16_t src)
 {
 	SET_OVERFLOW(0);
@@ -911,6 +960,7 @@ void MC_Processor6502::Op_CLV(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_CMP(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_CMP @note Private @param src @retval None */
 void MC_Processor6502::Op_CMP(uint16_t src)
 {
 	unsigned int tmp = m_registers.A - MemoryRead(src);
@@ -922,6 +972,7 @@ void MC_Processor6502::Op_CMP(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_CPX(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_CPX @note Private @param src @retval None */
 void MC_Processor6502::Op_CPX(uint16_t src)
 {
 	unsigned int tmp = m_registers.X - MemoryRead(src);
@@ -933,6 +984,7 @@ void MC_Processor6502::Op_CPX(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_CPY(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_CPY @note Private @param src @retval None */
 void MC_Processor6502::Op_CPY(uint16_t src)
 {
 	unsigned int tmp = m_registers.Y - MemoryRead(src);
@@ -944,6 +996,7 @@ void MC_Processor6502::Op_CPY(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_DEC(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_DEC @note Private @param src @retval None */
 void MC_Processor6502::Op_DEC(uint16_t src)
 {
 	uint8_t m = MemoryRead(src);
@@ -956,6 +1009,7 @@ void MC_Processor6502::Op_DEC(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_DEX(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_DEX @note Private @param src @retval None */
 void MC_Processor6502::Op_DEX(uint16_t src)
 {
 	uint8_t m = m_registers.X;
@@ -968,6 +1022,7 @@ void MC_Processor6502::Op_DEX(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_DEY(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_DEY @note Private @param src @retval None */
 void MC_Processor6502::Op_DEY(uint16_t src)
 {
 	uint8_t m = m_registers.Y;
@@ -980,6 +1035,7 @@ void MC_Processor6502::Op_DEY(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_EOR(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_EOR @note Private @param src @retval None */
 void MC_Processor6502::Op_EOR(uint16_t src)
 {
 	uint8_t m = MemoryRead(src);
@@ -991,6 +1047,7 @@ void MC_Processor6502::Op_EOR(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_INC(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_INC @note Private @param src @retval None */
 void MC_Processor6502::Op_INC(uint16_t src)
 {
 	uint8_t m = MemoryRead(src);
@@ -1002,6 +1059,7 @@ void MC_Processor6502::Op_INC(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_INX(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_INX @note Private @param src @retval None */
 void MC_Processor6502::Op_INX(uint16_t src)
 {
 	uint8_t m = m_registers.X;
@@ -1013,6 +1071,7 @@ void MC_Processor6502::Op_INX(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_INY(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_INY @note Private @param src @retval None */
 void MC_Processor6502::Op_INY(uint16_t src)
 {
 	uint8_t m = m_registers.Y;
@@ -1024,6 +1083,7 @@ void MC_Processor6502::Op_INY(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_JMP(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_JMP @note Private @param src @retval None */
 void MC_Processor6502::Op_JMP(uint16_t src)
 {
 	m_registers.pc = src;
@@ -1031,6 +1091,7 @@ void MC_Processor6502::Op_JMP(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_JSR(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_JSR @note Private @param src @retval None */
 void MC_Processor6502::Op_JSR(uint16_t src)
 {
 	m_registers.pc--;
@@ -1041,6 +1102,7 @@ void MC_Processor6502::Op_JSR(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_LDA(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_LDA @note Private @param src @retval None */
 void MC_Processor6502::Op_LDA(uint16_t src)
 {
 	uint8_t m = MemoryRead(src);
@@ -1051,6 +1113,7 @@ void MC_Processor6502::Op_LDA(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_LDX(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_LDX @note Private @param src @retval None */
 void MC_Processor6502::Op_LDX(uint16_t src)
 {
 	uint8_t m = MemoryRead(src);
@@ -1061,6 +1124,7 @@ void MC_Processor6502::Op_LDX(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_LDY(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_LDY @note Private @param src @retval None */
 void MC_Processor6502::Op_LDY(uint16_t src)
 {
 	uint8_t m = MemoryRead(src);
@@ -1071,6 +1135,7 @@ void MC_Processor6502::Op_LDY(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_LSR(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_LSR @note Private @param src @retval None */
 void MC_Processor6502::Op_LSR(uint16_t src)
 {
 	uint8_t m = MemoryRead(src);
@@ -1083,6 +1148,7 @@ void MC_Processor6502::Op_LSR(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_LSR_ACC(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_LSR_ACC @note Private @param src @retval None */
 void MC_Processor6502::Op_LSR_ACC(uint16_t src)
 {
 	uint8_t m = m_registers.A;
@@ -1095,6 +1161,7 @@ void MC_Processor6502::Op_LSR_ACC(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_NOP(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_NOP @note Private @param src @retval None */
 void MC_Processor6502::Op_NOP(uint16_t src)
 {
 	return;
@@ -1102,6 +1169,7 @@ void MC_Processor6502::Op_NOP(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_ORA(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_ORA @note Private @param src @retval None */
 void MC_Processor6502::Op_ORA(uint16_t src)
 {
 	uint8_t m = MemoryRead(src);
@@ -1113,6 +1181,7 @@ void MC_Processor6502::Op_ORA(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_PHA(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_PHA @note Private @param src @retval None */
 void MC_Processor6502::Op_PHA(uint16_t src)
 {
 	StackPush(m_registers.A);
@@ -1121,6 +1190,7 @@ void MC_Processor6502::Op_PHA(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_PHP(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_PHP @note Private @param src @retval None */
 void MC_Processor6502::Op_PHP(uint16_t src)
 {
 	StackPush(m_registers.status | FLAGBREAK);
@@ -1129,6 +1199,7 @@ void MC_Processor6502::Op_PHP(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_PLA(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_PLA @note Private @param src @retval None */
 void MC_Processor6502::Op_PLA(uint16_t src)
 {
 	m_registers.A = StackPop();
@@ -1139,6 +1210,7 @@ void MC_Processor6502::Op_PLA(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_PLP(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_PLP @note Private @param src @retval None */
 void MC_Processor6502::Op_PLP(uint16_t src)
 {
 	m_registers.status = StackPop();
@@ -1148,6 +1220,7 @@ void MC_Processor6502::Op_PLP(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_ROL(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_ROL @note Private @param src @retval None */
 void MC_Processor6502::Op_ROL(uint16_t src)
 {
 	uint16_t m = MemoryRead(src);
@@ -1165,6 +1238,7 @@ void MC_Processor6502::Op_ROL(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_ROL_ACC(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_ROL_ACC @note Private @param src @retval None */
 void MC_Processor6502::Op_ROL_ACC(uint16_t src)
 {
 	uint16_t m = m_registers.A;
@@ -1182,6 +1256,7 @@ void MC_Processor6502::Op_ROL_ACC(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_ROR(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_ROR @note Private @param src @retval None */
 void MC_Processor6502::Op_ROR(uint16_t src)
 {
 	uint16_t m = MemoryRead(src);
@@ -1199,6 +1274,7 @@ void MC_Processor6502::Op_ROR(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_ROR_ACC(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_ROR_ACC @note Private @param src @retval None */
 void MC_Processor6502::Op_ROR_ACC(uint16_t src)
 {
 	uint16_t m = m_registers.A;
@@ -1216,6 +1292,7 @@ void MC_Processor6502::Op_ROR_ACC(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_RTI(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_RTI @note Private @param src @retval None */
 void MC_Processor6502::Op_RTI(uint16_t src)
 {
 	uint8_t lo, hi;
@@ -1229,6 +1306,7 @@ void MC_Processor6502::Op_RTI(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_RTS(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_RTS @note Private @param src @retval None */
 void MC_Processor6502::Op_RTS(uint16_t src)
 {
 	uint8_t lo, hi;
@@ -1241,6 +1319,7 @@ void MC_Processor6502::Op_RTS(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_SBC(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_SBC @note Private @param src @retval None */
 void MC_Processor6502::Op_SBC(uint16_t src)
 {
 	uint8_t m = MemoryRead(src);
@@ -1263,6 +1342,7 @@ void MC_Processor6502::Op_SBC(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_SEC(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_SEC @note Private @param src @retval None */
 void MC_Processor6502::Op_SEC(uint16_t src)
 {
 	SET_CARRY(1);
@@ -1271,6 +1351,7 @@ void MC_Processor6502::Op_SEC(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_SED(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_SED @note Private @param src @retval None */
 void MC_Processor6502::Op_SED(uint16_t src)
 {
 	SET_DECIMAL(1);
@@ -1279,6 +1360,7 @@ void MC_Processor6502::Op_SED(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_SEI(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_SEI @note Private @param src @retval None */
 void MC_Processor6502::Op_SEI(uint16_t src)
 {
 	SET_INTERRUPT(1);
@@ -1287,6 +1369,7 @@ void MC_Processor6502::Op_SEI(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_STA(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_STA @note Private @param src @retval None */
 void MC_Processor6502::Op_STA(uint16_t src)
 {
 	MemoryWrite(src, m_registers.A);
@@ -1295,6 +1378,7 @@ void MC_Processor6502::Op_STA(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_STX(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_STX @note Private @param src @retval None */
 void MC_Processor6502::Op_STX(uint16_t src)
 {
 	MemoryWrite(src, m_registers.X);
@@ -1303,6 +1387,7 @@ void MC_Processor6502::Op_STX(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_STY(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_STY @note Private @param src @retval None */
 void MC_Processor6502::Op_STY(uint16_t src)
 {
 	MemoryWrite(src, m_registers.Y);
@@ -1311,6 +1396,7 @@ void MC_Processor6502::Op_STY(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_TAX(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_TAX @note Private @param src @retval None */
 void MC_Processor6502::Op_TAX(uint16_t src)
 {
 	uint8_t m = m_registers.A;
@@ -1322,6 +1408,7 @@ void MC_Processor6502::Op_TAX(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_TAY(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_TAY @note Private @param src @retval None */
 void MC_Processor6502::Op_TAY(uint16_t src)
 {
 	uint8_t m = m_registers.A;
@@ -1333,6 +1420,7 @@ void MC_Processor6502::Op_TAY(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_TSX(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_TSX @note Private @param src @retval None */
 void MC_Processor6502::Op_TSX(uint16_t src)
 {
 	uint8_t m = m_registers.sp;
@@ -1344,6 +1432,7 @@ void MC_Processor6502::Op_TSX(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_TXA(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_TXA @note Private @param src @retval None */
 void MC_Processor6502::Op_TXA(uint16_t src)
 {
 	uint8_t m = m_registers.X;
@@ -1355,6 +1444,7 @@ void MC_Processor6502::Op_TXA(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_TXS(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_TXS @note Private @param src @retval None */
 void MC_Processor6502::Op_TXS(uint16_t src)
 {
 	m_registers.sp = m_registers.X;
@@ -1363,6 +1453,7 @@ void MC_Processor6502::Op_TXS(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Op_TYA(uint16_t src)
 //-----------------------------------------------------------------------------
+/** @brief Op_TYA @note Private @param src @retval None */
 void MC_Processor6502::Op_TYA(uint16_t src)
 {
 	uint8_t m = m_registers.Y;
@@ -1374,6 +1465,7 @@ void MC_Processor6502::Op_TYA(uint16_t src)
 //-Private---------------------------------------------------------------------
 // Name: Disassemble(char *output, size_t outputsize, uint8_t *buffer, uint16_t *pc)
 //-----------------------------------------------------------------------------
+/** @brief Disassemble @note Private @param output @param outputsize @param buffer @param None @retval pc */
 void MC_Processor6502::Disassemble(char* output, size_t outputsize, uint8_t* buffer, uint16_t* pc)
 {
 	char opcode_repr[DebugSubLineLen], hex_dump[DebugSubLineLen];
@@ -1491,6 +1583,7 @@ void MC_Processor6502::Disassemble(char* output, size_t outputsize, uint8_t* buf
 //-Private---------------------------------------------------------------------
 // Name: :PrintByteAsBits(char val)
 //-----------------------------------------------------------------------------
+/** @brief PrintByteAsBits @note Private @param val @retval None */
 void MC_Processor6502::PrintByteAsBits(char val)
 {
 	for (int i = 7; 0 <= i; i--) {
@@ -1500,6 +1593,7 @@ void MC_Processor6502::PrintByteAsBits(char val)
 //-Private---------------------------------------------------------------------
 // Name: PrintBits(const char* ty, const char* val, unsigned char* bytes, size_t num_bytes)
 //-----------------------------------------------------------------------------
+/** @brief PrintBits @note Private @param ty  @param val  @param bytes  @param num_bytes @retval None */
 void MC_Processor6502::PrintBits(const char* ty, const char* val, unsigned char* bytes, size_t num_bytes)
 {
 	printf("StatusFlags [ ");
@@ -1512,6 +1606,7 @@ void MC_Processor6502::PrintBits(const char* ty, const char* val, unsigned char*
 //-Private---------------------------------------------------------------------
 // Name: PrintHexDump16Bit(const char* desc, void* addr, long len, long offset)
 //-----------------------------------------------------------------------------
+/** @brief PrintHexDump16Bit @note Private @param desc @param addr @param len @param offset @retval None */
 void MC_Processor6502::PrintHexDump16Bit(const char* desc, void* addr, long len, long offset)
 {
 	long i;

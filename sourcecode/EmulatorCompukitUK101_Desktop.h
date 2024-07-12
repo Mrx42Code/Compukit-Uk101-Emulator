@@ -1,11 +1,11 @@
 //*****************************************************************************
 // MIT License
 //
-// Copyright(c) 2023 Mrx42Code
+// Copyright(c) 2024 Mrx42Code
 // https://github.com/Mrx42Code/Compukit-Uk101-Emulator 
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this softwareand associated documentation files(the "Software"), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
@@ -49,12 +49,12 @@
 //-----------------------------------------------------------------------------
 // define
 //-----------------------------------------------------------------------------
-#define IDT_TIMERCyclesPerSec   1
-#define IDT_TIMERIrq            2
-#define IDT_TIMERNmi            3
-#define IDT_TIMERDlg            4
+#define IDT_TIMERCyclesPerSec   1												// Cycles Per Second			
+#define IDT_TIMERIrq            2												// IRQ
+#define IDT_TIMERNmi            3												// NMI
+#define IDT_TIMERDlg            4												// Dialog
 
-#define MAX_LOADSTRING          100
+#define MAX_LOADSTRING          100												// Max Load String
 
 //-----------------------------------------------------------------------------
 // struct
@@ -64,18 +64,18 @@
 // Name: Functions Calls
 //-----------------------------------------------------------------------------
 // Forward declarations of functions included in this code module:
-ATOM                MyRegisterClass(HINSTANCE hInstance);
-BOOL                InitInstance(HINSTANCE, int);
-void                UpdateMenus(HWND hWnd);
-void                DebugControlPanelSetItems(HWND hWnd);
-void                DebugControlPanelGetItems(HWND hWnd);
-void                SetButtonChecked(HWND hWnd, int Button, int Mode);
-bool                AddConsole();
-void                UpdateConsoleTitle();
-std::wstring        ConvertHexUint16ToWstring(uint16_t Value);
-std::wstring        ConvertHexUint8ToWstring(uint8_t Value);
-uint16_t            ConvertHexLPWSTRTouint16(LPWSTR Value);
-uint8_t             ConvertHexLPWSTRTouint8(LPWSTR Value);
+ATOM                MyRegisterClass(HINSTANCE hInstance);						// Register Window Class
+BOOL                InitInstance(HINSTANCE, int);								// Init Instance
+void                UpdateMenus(HWND hWnd);										// Update Menus
+void                DebugControlPanelSetItems(HWND hWnd);						// Set Debug Control Panel Items
+void                DebugControlPanelGetItems(HWND hWnd);						// Get Debug Control Panel Items
+void                SetButtonChecked(HWND hWnd, int Button, int Mode);			// Set Button Checked
+bool                AddConsole();												// Add Console
+void                UpdateConsoleTitle();										// Update Console Title
+std::wstring        ConvertHexUint16ToWstring(uint16_t Value);					// Convert Hex Uint16 To Wstring
+std::wstring        ConvertHexUint8ToWstring(uint8_t Value);					// Convert Hex Uint8 To Wstring
+uint16_t            ConvertHexLPWSTRTouint16(LPWSTR Value);						// Convert Hex LPWSTR To Uint16
+uint8_t             ConvertHexLPWSTRTouint8(LPWSTR Value);						// Convert Hex LPWSTR To Uint8
 
 //-----------------------------------------------------------------------------
 #endif // EmulatorCompukitUK101_Desktop_H

@@ -1,11 +1,11 @@
 //*****************************************************************************
 // MIT License
 //
-// Copyright(c) 2023 Mrx42Code
+// Copyright(c) 2024 Mrx42Code
 // https://github.com/Mrx42Code/Compukit-Uk101-Emulator 
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this softwareand associated documentation files(the "Software"), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
@@ -49,18 +49,18 @@
 //-----------------------------------------------------------------------------
 // define
 //-----------------------------------------------------------------------------
-#define VideoPixelPerCharacter              8
+#define VideoPixelPerCharacter              8									// 8 pixels per character
 
-#define VideoRows                           64
+#define VideoRows                           64									// 64 rows
 #define VideoCols                           (MemoryVideoSizeAddress / 64)
-#define VideoLinePixelWidth                 VideoRows * VideoPixelPerCharacter
+#define VideoLinePixelWidth                 VideoRows * VideoPixelPerCharacter	// 64 * 8 = 512
 
 #if F000OrF800_Rom
-#define VideoCharacterStartPos_x			11
-#define VideoCharacterPerLine				48
+#define VideoCharacterStartPos_x			11									// 11
+#define VideoCharacterPerLine				48									// 48	
 #else 
-#define VideoCharacterStartPos_x			12
-#define VideoCharacterPerLine				49
+#define VideoCharacterStartPos_x			12									// 12
+#define VideoCharacterPerLine				49									// 49
 #endif
 
 #define MemoryVideoMapSize					(MemoryVideoSizeAddress * VideoPixelPerCharacter)			// Screen Video Ram
@@ -69,33 +69,33 @@
 #define MemoryBitMapWidth                   ((VideoCharacterPerLine * VideoPixelPerCharacter))          // Width
 #define MemoryBitMaprHeight                 ((VideoCols * VideoPixelPerCharacter))                      // Height
 
-#define VideoDisplayPixelStart_x            (VideoCharacterStartPos_x * VideoPixelPerCharacter)
-#define VideoDisplayPixelEnd_x              ((VideoCharacterPerLine * VideoPixelPerCharacter ) + VideoDisplayPixelStart_x)
+#define VideoDisplayPixelStart_x            (VideoCharacterStartPos_x * VideoPixelPerCharacter)			// Start Position
+#define VideoDisplayPixelEnd_x              ((VideoCharacterPerLine * VideoPixelPerCharacter ) + VideoDisplayPixelStart_x)	// End Position
 
-#define VideoDisplaySize_x                 (VideoDisplayPixelEnd_x - VideoDisplayPixelStart_x)
-#define VideoDisplaySize_y                 (MemoryBitMaprHeight)
+#define VideoDisplaySize_x                 (VideoDisplayPixelEnd_x - VideoDisplayPixelStart_x)			// Size x
+#define VideoDisplaySize_y                 (MemoryBitMaprHeight)										// Size	y
 
-#define VideoLeftOffSet                    10
-#define VideoTopOffSet                     10
+#define VideoLeftOffSet                    10									// 10
+#define VideoTopOffSet                     10									// 10
 
 //-----------------------------------------------------------------------------
 // struct
 //-----------------------------------------------------------------------------
-typedef struct ScreenImageInfo
+typedef struct ScreenImageInfo													// Screen Image Info
 {
-	HDC                     hdc;
-	HBITMAP                 Bitmap;
-	HGDIOBJ                 SelectObj;
-	RECT                    Rect;
-	RECT                    DisplayRect;
-	COLORREF                Colour;
+	HDC                 hdc;													// Device Context
+	HBITMAP             Bitmap;													// Bitmap
+	HGDIOBJ             SelectObj;												// Select Object
+	RECT                Rect;													// Rect
+	RECT                DisplayRect;											// Display Rect
+	COLORREF            Colour;													// Colour
 } _ScreenImageInfo;
 
-typedef struct DisplayInfo
+typedef struct DisplayInfo														// Display Info
 {
-	HWND                    Hwnd;
-	HDC                     hdc;
-	RECT                    Rect;
+	HWND                Hwnd;													// Hwnd
+	HDC                 hdc;													// Device Context
+	RECT				Rect;													// Rect
 } _DisplayInfo;
 
 //-----------------------------------------------------------------------------
@@ -105,30 +105,30 @@ typedef struct DisplayInfo
 class MC_VideoDisplay
 {
 public:
-	bool                m_Update;
-	uint8_t             m_MemoryVideoCompare[MemoryVideoSizeAddress];
-	DisplayInfo         m_Display;
+	bool                m_Update;												// Update
+	uint8_t             m_MemoryVideoCompare[MemoryVideoSizeAddress];			// Memory Video Compare
+	DisplayInfo         m_Display;													// Display
 
 private:
-	ScreenImageInfo     m_ScreenImage;
-	uint8_t             m_MemoryVideoMap[MemoryVideoMapSize];
-	uint8_t             m_MemoryVideoChrRomMap[MemoryVideoChrMapSize];
+	ScreenImageInfo     m_ScreenImage;											// Screen Image
+	uint8_t             m_MemoryVideoMap[MemoryVideoMapSize];					// Memory Video
+	uint8_t             m_MemoryVideoChrRomMap[MemoryVideoChrMapSize];			// Memory Video Character Set
 
 protected:
 
-	//-----------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 
 public:
 	MC_VideoDisplay();
 	virtual				~MC_VideoDisplay();
-	void                Initialize();
-	void                Destroy();
-	void                Create();
-	void                ReSizeDisplay();
-	void                Forceupdate();
-	void                CpuEmuVideoDisplay(uint16_t address, uint8_t value);
-	void                CpuEmuRenderDisplay();
-	void                CpuEmuLoadCharacterSetRom(std::string FileName);
+	void                Initialize();											// Initialize
+	void                Destroy();												// Destroy
+	void                Create();												// Create
+	void                ReSizeDisplay();										// ReSize Display
+	void                Forceupdate();											// Force Update
+	void                CpuEmuVideoDisplay(uint16_t address, uint8_t value);	// Cpu Emu Video Display
+	void                CpuEmuRenderDisplay();									// Cpu Emu Render Display
+	void                CpuEmuLoadCharacterSetRom(std::string FileName);		// Cpu Emu Load Character Set Rom
 
 private:
 protected:

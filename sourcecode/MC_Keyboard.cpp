@@ -1,11 +1,11 @@
 //*****************************************************************************
 // MIT License
 //
-// Copyright(c) 2023 Mrx42Code
+// Copyright(c) 2024 Mrx42Code
 // https://github.com/Mrx42Code/Compukit-Uk101-Emulator 
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this softwareand associated documentation files(the "Software"), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
@@ -35,6 +35,7 @@
 // include Project
 //-----------------------------------------------------------------------------
 #include "MC_Keyboard.h"
+#include "MC_Hardware6502.h"
 
 //-----------------------------------------------------------------------------
 // include Vendors
@@ -43,6 +44,7 @@
 //-----------------------------------------------------------------------------
 // Implementation Classes
 //-----------------------------------------------------------------------------
+extern MC_Hardware6502 mc_Hardware6502;
 
 //-----------------------------------------------------------------------------
 // Implementation Variables
@@ -97,6 +99,7 @@ static const uint8_t m_KeyCodeTableKeys[] = {
 // Name: MC_Keyboard()
 // Desc: MC_Keyboard class
 //-----------------------------------------------------------------------------
+/** @brief MC_Keyboard @note Public @param None @retval None */
 MC_Keyboard::MC_Keyboard()
 {
 	memset(&m_MemoryKeyScan, 0, sizeof(m_MemoryKeyScan));
@@ -108,35 +111,39 @@ MC_Keyboard::MC_Keyboard()
 // Name: ~MC_Keyboard()
 // Desc: ~MC_Keyboard Destruction class
 //-----------------------------------------------------------------------------
+/** @brief ~MC_Keyboard @note Public @param None @retval None */
 MC_Keyboard::~MC_Keyboard()
 {
-
 }
 //-Public----------------------------------------------------------------------
 // Name: Initialize()
 //-----------------------------------------------------------------------------
+/** @brief Initialize @note Public @param None @retval None */
 void MC_Keyboard::Initialize()
 {
 	memset(&m_MemoryKeyScan, 0x00, sizeof(m_MemoryKeyScan));
 	m_MemoryKeyScan.KeysDone = true;
+	mc_Hardware6502.PrintStatus(false, "Keyboard Initialize");
 }
 //-Public----------------------------------------------------------------------
 // Name: Destroy()
 //-----------------------------------------------------------------------------
+/** @brief Destroy @note Public @param None @retval None */
 void MC_Keyboard::Destroy()
 {
-
+	mc_Hardware6502.PrintStatus(false, "Keyboard Destroy");
 }
 //-Public----------------------------------------------------------------------
 // Name: Create()
 //-----------------------------------------------------------------------------
+/** @brief Create @note Public @param None @retval None */
 void MC_Keyboard::Create()
 {
-
 }
 //-Public----------------------------------------------------------------------
 // Name: MemoryRead()
 //-----------------------------------------------------------------------------
+/** @brief MemoryRead @note Public @param None @retval uint8_t */
 uint8_t	MC_Keyboard::MemoryRead()
 {
 	uint8_t Data;
@@ -174,6 +181,7 @@ uint8_t	MC_Keyboard::MemoryRead()
 //-Public----------------------------------------------------------------------
 // Name: MemoryWrite(uint8_t MemoryWriteValue)
 //-----------------------------------------------------------------------------
+/** @brief MemoryWrite @note Public @param MemoryWriteValue @retval None */
 void MC_Keyboard::MemoryWrite(uint8_t MemoryWriteValue)
 {
 	m_MemoryKeyScan.CpuRow = MemoryWriteValue;
@@ -182,6 +190,7 @@ void MC_Keyboard::MemoryWrite(uint8_t MemoryWriteValue)
 //-Public----------------------------------------------------------------------
 // Name: KeyboardMapKey(uint8_t KeyPress)
 //-----------------------------------------------------------------------------
+/** @brief KeyboardMapKey @note Public @param KeyPress @retval None */
 bool MC_Keyboard::KeyboardMapKey(uint8_t KeyPress)
 {
 	int i;

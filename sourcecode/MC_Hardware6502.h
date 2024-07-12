@@ -1,11 +1,11 @@
 //*****************************************************************************
 // MIT License
 //
-// Copyright(c) 2023 Mrx42Code
+// Copyright(c) 2024 Mrx42Code
 // https://github.com/Mrx42Code/Compukit-Uk101-Emulator 
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this softwareand associated documentation files(the "Software"), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
@@ -163,69 +163,72 @@
 //-----------------------------------------------------------------------------
 // struct
 //-----------------------------------------------------------------------------
-typedef struct UartStatusBits
+typedef struct UartStatusBits													// Status Bits
 {
-	bool                    RDRF : 1; // bit 0
-	bool                    TDRE : 1;
-	bool                    DCD : 1;
-	bool                    CTS : 1;
-	bool                    FE : 1;
-	bool                    OVRN : 1;
-	bool                    PE : 1;
-	bool                    IRQ : 1;  // bit 7
+	bool                    RDRF : 1;											// bit 0
+	bool                    TDRE : 1;											// bit 1
+	bool                    DCD : 1;											// bit 2
+	bool                    CTS : 1;											// bit 3
+	bool                    FE : 1;												// bit 4
+	bool                    OVRN : 1;											// bit 5
+	bool                    PE : 1;												// bit 6
+	bool                    IRQ : 1;											// bit 7
 } _UartStatusBits;
 
-union UartStatusReg {
-	struct UartStatusBits   bits;
-	uint8_t                 byte;
+union UartStatusReg																// Status Register
+{
+	struct UartStatusBits   bits;												// Status Bits
+	uint8_t                 byte;												// Byte
 };
 
-typedef struct Uart6850InOut
+typedef struct Uart6850InOut													// Uart 6850 Input and Output
 {
-	uint8_t                 CharData;
-	char                    Buffer[UARTBUFFER6850];
-	int                     ProcessedIndex;
-	int                     Index;
+	uint8_t                 CharData;											// Character Data
+	char                    Buffer[UARTBUFFER6850];								// Buffer
+	int                     ProcessedIndex;										// Processed Index
+	int                     Index;												// Index
 } _Uart6850InOut;
 
-typedef struct Uart6850
+typedef struct Uart6850															// Uart 6850
 {
-	union UartStatusReg     Registers_SR;
-	Uart6850InOut           Input;
-	Uart6850InOut           Output;
+	union UartStatusReg     Registers_SR;										// Status Register
+	struct Uart6850InOut    Input;												// Input
+	struct Uart6850InOut    Output;												// Output
 } _Uart6850;
 
-typedef struct CpuThreadType
+typedef struct CpuThreadType													// Cpu Thread
 {
-	bool				    Running = false;
-	bool				    Quit = false;
-	std::thread			    Thread;
+	bool				    Running = false;									// Running
+	bool				    Quit = false;										// Quit
+	std::thread			    Thread;												// Thread
 } _CpuThreadType;
 
-typedef struct CpuSpeedSettings
+typedef struct CpuSpeedSettings													// Cpu Speed Settings
 {
-	int                     Speed;
-	float                   SpeedUpDn;
-	double                  AvrSpeed;
-	double                  AvrBigSpeed;
-	double                  CyclesPerSec;
+	int                     Speed;												// Speed
+	float                   SpeedUpDn;											// Speed Up or Down
+	double                  AvrSpeed;											// Avr Speed
+	double                  AvrBigSpeed;										// Avr Big Speed
+	double                  CyclesPerSec;										// Cycles Per Sec
 } _CpuSpeedSettings;
 
-typedef struct CpuDebugPanel {
-	uint16_t                DumpStartAddress;
-	uint16_t                DumpEndAddress;
-	bool                    Update;
+typedef struct CpuDebugPanel													// Cpu Debug Panel
+{
+	uint16_t                DumpStartAddress;									// Dump Start Address
+	uint16_t                DumpEndAddress;										// Dump End Address
+	bool                    Update;												// Update
 } CpuDebugPanel;
 
-typedef struct IniFilevector {
-	std::vector<std::string> LineData;
+typedef struct IniFilevector													// Ini Filevector
+{
+	std::vector<std::string> LineData;											// Line Data
 } _IniFilevector;
 
-typedef struct BreakPoint
+typedef struct BreakPoint														// Break Point
 {
-	bool                SetFlag;
-	bool                Found;
-	uint16_t            Address;
+	bool					SetFlag;											// Set Flag
+	bool					Found;												// Found
+	uint16_t				Address;											// Address
 } _BreakPoint;
 
 //-----------------------------------------------------------------------------
@@ -236,62 +239,59 @@ class MC_Hardware6502
 {
 
 public:
-	HANDLE              m_hConsole;
-	CpuSpeedSettings    m_CpuSettings;
-	bool                m_BasicSelectUk101OrOsi;
-	bool                m_Cpu6502Run;
-	bool                m_Cpu6502Step;
-	bool                m_Disassembler6502;
-	BreakPoint          m_BreakPointOpCode;
-	BreakPoint          m_BreakPointMemory;
-	uint8_t             m_MemoryMap[MemoryMapSizeAddress];
-	bool                m_MemoryWriteOverride;
-	HWND                m_App_Hwnd;
-	CpuDebugPanel       m_CpuDebugPanel;
-	IniFilevector       m_IniFileString;
+	HANDLE					m_hConsole;											// Handle to the console
+	struct CpuSpeedSettings m_CpuSettings;										// Cpu Speed Settings
+	bool					m_BasicSelectUk101OrOsi;							// Basic Select Uk101 Or Osi
+	bool					m_Cpu6502Run;										// Cpu Run
+	bool					m_Cpu6502Step;										// Cpu Step
+	bool					m_Disassembler6502;									// Disassembler 6502
+	struct BreakPoint       m_BreakPointOpCode;									// Break Point Op Code
+	struct BreakPoint       m_BreakPointMemory;									// Break Point Memory
+	uint8_t					m_MemoryMap[MemoryMapSizeAddress];					// Cpu Memory Map
+	bool					m_MemoryWriteOverride;								// Cpu Memory Write Override
+	HWND					m_App_Hwnd;											// App Hwnd
+	struct CpuDebugPanel    m_CpuDebugPanel;									// Cpu Debug Panel
+	struct IniFilevector    m_IniFileString;									// Ini File String
 
 private:
-	Uart6850            m_Uart6850;
-	CpuThreadType       mc_ThreadMain;
-	CpuThreadType       mc_ThreadVideo;
+	struct Uart6850         m_Uart6850;											// Uart 6850
+	struct CpuThreadType    mc_ThreadMain;										// Cpu Thread
+	struct CpuThreadType    mc_ThreadVideo;										// Cpu Video Thread
 
 protected:
 
-	//-----------------------------------------------------------------------------
+	//-------------------------------------------------------------------------
 
 public:
 	MC_Hardware6502();
 	virtual				~MC_Hardware6502();
-	void				Initialize();
-	void				Destroy();
-	void				Create();
-	void                ReSizeDisplay();
-	void                PrintStatus(bool Error, std::string Msg);
-	void				KeyPress(uint8_t Key);
-
-	void                CpuSetParameters();
-	void                CpuSetBreakPointOpCode(bool Enable, uint16_t Address);
-	void                CpuSetBreakPointMemory(bool Enable, uint16_t Address);
-	void				CpuSetPC(uint16_t PC);
-
-	void                CpuIRQ();
-	void                CpuNMI();
-	void                CpuInitializeAndReset();
-	void                CpuReset();
-	void                CpuStop();
-	void                CpuRun();
-	void                CpuStep();
-
-	void                CpuCalCyclesPer10thSec();
-	void                CpuCegmonukRomMod();
-	void                CpuLoadFile();
-	void                CpuSaveFile();
-	void                CpuMemoryLoadFile();
-	void                CpuMemoryMapDump();
-	void                CpuMemoryMapDump(uint16_t StartAddress, uint16_t EndAddress);
-	uint8_t             CpuMemoryMapRead(uint16_t address);
-	void                CpuMemoryMapWrite(uint16_t address, uint8_t value);
-	void                CpuPrintMemoryInfo();
+	void				Initialize();											// Initialize
+	void				Destroy();												// Destroy
+	void				Create();												// Create
+	void                ReSizeDisplay();										// ReSize Display
+	void                PrintStatus(bool Error, std::string Msg);				// Print Status
+	void				KeyPress(uint8_t Key);									// Key Press
+	void                CpuSetParameters();										// Cpu Set Parameters
+	void                CpuSetBreakPointOpCode(bool Enable, uint16_t Address);	// Cpu Set Break Point Op Code
+	void                CpuSetBreakPointMemory(bool Enable, uint16_t Address);	// Cpu Set Break Point Memory
+	void				CpuSetPC(uint16_t PC);									// Cpu Set PC
+	void                CpuIRQ();												// Cpu IRQ
+	void                CpuNMI();												// Cpu NMI
+	void                CpuInitializeAndReset();								// Cpu Initialize And Reset
+	void                CpuReset();												// Cpu Reset
+	void                CpuStop();												// Cpu Stop
+	void                CpuRun();												// Cpu Run
+	void                CpuStep();												// Cpu Step
+	void                CpuCalCyclesPer10thSec();								// Cpu Cal Cycles Per 10th Sec
+	void                CpuCegmonukRomMod();									// Cpu Cegmonuk Rom Mod
+	void                CpuLoadFile();											// Cpu Load File
+	void                CpuSaveFile();											// Cpu Save File
+	void                CpuMemoryLoadFile();									// Cpu Memory Load File
+	void                CpuMemoryMapDump();										// Cpu Memory Map Dump
+	void                CpuMemoryMapDump(uint16_t StartAddress, uint16_t EndAddress); // Cpu Memory Map Dump
+	uint8_t             CpuMemoryMapRead(uint16_t address);						// Cpu Memory Map Read
+	void                CpuMemoryMapWrite(uint16_t address, uint8_t value);		// Cpu Memory Map Write
+	void                CpuPrintMemoryInfo();									// Cpu Print Memory Info
 
 private:
 	void                CpuMemoryInit();
@@ -301,7 +301,6 @@ private:
 	uint8_t             CpuEmuKeyboard(uint16_t address, bool RW);
 	void                CpuLoadIniFileRoms();
 	void                CpuLoadRoms();
-
 	void                MemoryLoad(uint16_t MemoryAddress, uint16_t MemorySize, std::string FileName);
 	void                MemorySave(uint16_t MemoryAddress, uint16_t MemorySize, std::string FileName);
 	void                MemoryLoadIntelFormat(uint16_t MemoryAddress, uint16_t MemorySize, std::string FileName);
@@ -318,7 +317,6 @@ private:
 	bool                IniFileWrite(std::string FileName);
 	bool                TestForBreakPointOpCode();
 	void                TestForBreakPointMemory(uint16_t& address, uint8_t& data, bool ReadWrite);
-
 	void				Thread_Create();
 	void				Thread_Stop();
 	void				Thread_CallBack_Main(int MultiThread_ID);

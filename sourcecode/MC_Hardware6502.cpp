@@ -1,11 +1,11 @@
 //*****************************************************************************
 // MIT License
 //
-// Copyright(c) 2023 Mrx42Code
+// Copyright(c) 2024 Mrx42Code
 // https://github.com/Mrx42Code/Compukit-Uk101-Emulator 
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this softwareand associated documentation files(the "Software"), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
@@ -30,6 +30,7 @@
 //-----------------------------------------------------------------------------
 // include Windows standard Libs
 //-----------------------------------------------------------------------------
+using namespace std;
 
 //-----------------------------------------------------------------------------
 // include Project
@@ -57,6 +58,7 @@ MC_Keyboard mc_Keyboard;
 //-----------------------------------------------------------------------------
 // Private Callback Handlers
 //-----------------------------------------------------------------------------
+
 uint8_t CpuMemoryRead_Callback(uint16_t address);
 void CpuMemoryWrite_Callback(uint16_t address, uint8_t value);
 MC_Processor6502 mc_Processor6502(CpuMemoryRead_Callback, CpuMemoryWrite_Callback);
@@ -73,6 +75,7 @@ MC_Processor6502 mc_Processor6502(CpuMemoryRead_Callback, CpuMemoryWrite_Callbac
 // Name: MC_Hardware6502()
 // Desc: MC_Hardware6502 class
 //-----------------------------------------------------------------------------
+/** @brief MC_Hardware6502 @note Public @param None @retval None */
 MC_Hardware6502::MC_Hardware6502()
 {
 	m_hConsole = nullptr;
@@ -99,6 +102,7 @@ MC_Hardware6502::MC_Hardware6502()
 // Name: ~MC_Hardware6502()
 // Desc: ~MC_Hardware6502 Destruction class
 //-----------------------------------------------------------------------------
+/** @brief ~MC_Hardware6502 @note Public @param None @retval None */
 MC_Hardware6502::~MC_Hardware6502()
 {
 	Thread_Stop();
@@ -106,6 +110,7 @@ MC_Hardware6502::~MC_Hardware6502()
 //-Public----------------------------------------------------------------------
 // Name: Initialize()
 //-----------------------------------------------------------------------------
+/** @brief Initialize @note Public @param None @retval None */
 void MC_Hardware6502::Initialize()
 {
 	PrintStatus(false, "Hardware Initialize");
@@ -119,6 +124,7 @@ void MC_Hardware6502::Initialize()
 //-Public----------------------------------------------------------------------
 // Name: Destroy()
 //-----------------------------------------------------------------------------
+/** @brief Destroy @note Public @param None @retval None */
 void MC_Hardware6502::Destroy()
 {
 	PrintStatus(false, "Hardware Destroy");
@@ -130,9 +136,9 @@ void MC_Hardware6502::Destroy()
 //-Public----------------------------------------------------------------------
 // Name: Create()
 //-----------------------------------------------------------------------------
+/** @brief Create @note Public @param None @retval None */
 void MC_Hardware6502::Create()
 {
-	PrintStatus(false, "Hardware Create");
 	mc_VideoDisplay.Create();
 	mc_Keyboard.Create();
 	mc_VideoDisplay.m_Display.Hwnd = m_App_Hwnd;
@@ -143,13 +149,13 @@ void MC_Hardware6502::Create()
 		IniFileWrite("Compukit_UK101.ini");
 	}
 #endif
-	CpuSetParameters();
 	CpuInitializeAndReset();
 	Thread_Create();
 }
 //-Public----------------------------------------------------------------------
 // Name: ReSizeDisplay()
 //-----------------------------------------------------------------------------
+/** @brief ReSizeDisplay @note Public @param None @retval None */
 void MC_Hardware6502::ReSizeDisplay()
 {
 	mc_VideoDisplay.Forceupdate();
@@ -158,6 +164,7 @@ void MC_Hardware6502::ReSizeDisplay()
 //-Public----------------------------------------------------------------------
 // Name: PrintStatus(bool Error, std::string Msg)
 //-----------------------------------------------------------------------------
+/** @brief PrintStatus @note Public @param Error  @param Msg @retval None */
 void MC_Hardware6502::PrintStatus(bool Error, std::string Msg)
 {
 	if (Error) {
@@ -170,6 +177,7 @@ void MC_Hardware6502::PrintStatus(bool Error, std::string Msg)
 //-Public----------------------------------------------------------------------
 // Name: KeyPress(uint8_t Key)
 //-----------------------------------------------------------------------------
+/** @brief KeyPress @note Public @param Key @retval None */
 void MC_Hardware6502::KeyPress(uint8_t Key)
 {
 	mc_Keyboard.KeyboardMapKey(Key);
@@ -177,6 +185,7 @@ void MC_Hardware6502::KeyPress(uint8_t Key)
 //-Public----------------------------------------------------------------------
 // Name: CpuMemoryMapRead(uint16_t address)
 //-----------------------------------------------------------------------------
+/** @brief CpuMemoryMapRead @note Public @param address @retval uint8_t Data */
 uint8_t MC_Hardware6502::CpuMemoryMapRead(uint16_t address)
 {
 	uint8_t Data = 0xFF;
@@ -229,6 +238,7 @@ uint8_t MC_Hardware6502::CpuMemoryMapRead(uint16_t address)
 //-Public----------------------------------------------------------------------
 // Name: CpuMemoryMapWrite(uint16_t address, uint8_t value)
 //-----------------------------------------------------------------------------
+/** @brief CpuMemoryMapWrite @note Public @param address @param value @retval None */
 void MC_Hardware6502::CpuMemoryMapWrite(uint16_t address, uint8_t value)
 {
 #if CPU6502_TESTMODE
@@ -276,6 +286,7 @@ void MC_Hardware6502::CpuMemoryMapWrite(uint16_t address, uint8_t value)
 //-Public----------------------------------------------------------------------
 // Name: CpuIRQ()
 //-----------------------------------------------------------------------------
+/** @brief CpuIRQ @note Public @param None @retval None */
 void MC_Hardware6502::CpuIRQ()
 {
 	if (m_Cpu6502Run) {
@@ -286,6 +297,7 @@ void MC_Hardware6502::CpuIRQ()
 //-Public----------------------------------------------------------------------
 // Name: CpuNMI()
 //-----------------------------------------------------------------------------
+/** @brief CpuNMI @note Public @param None @retval None */
 void MC_Hardware6502::CpuNMI()
 {
 	if (m_Cpu6502Run) {
@@ -296,6 +308,7 @@ void MC_Hardware6502::CpuNMI()
 //-Public----------------------------------------------------------------------
 // Name: CpuInitializeAndReset()
 //-----------------------------------------------------------------------------
+/** @brief CpuInitializeAndReset @note Public @param None @retval None */
 void MC_Hardware6502::CpuInitializeAndReset()
 {
 	CpuMemoryInit();
@@ -314,11 +327,13 @@ void MC_Hardware6502::CpuInitializeAndReset()
 	mc_Processor6502.SetPC(0x0400);
 #endif
 	PrintStatus(false, "Cpu Initialize And Reset");
+	CpuSetParameters();
 	CpuRun();
 }
 //-Public----------------------------------------------------------------------
 // Name: CpuReset()
 //-----------------------------------------------------------------------------
+/** @brief CpuReset @note Public @param None @retval None */
 void MC_Hardware6502::CpuReset()
 {
 	bool Cpu6502Run = m_Cpu6502Run;
@@ -343,6 +358,7 @@ void MC_Hardware6502::CpuReset()
 //-Public----------------------------------------------------------------------
 // Name: CpuStop()
 //-----------------------------------------------------------------------------
+/** @brief CpuStop @note Public @param None @retval None */
 void MC_Hardware6502::CpuStop()
 {
 	m_Cpu6502Step = false;
@@ -353,6 +369,7 @@ void MC_Hardware6502::CpuStop()
 //-Public----------------------------------------------------------------------
 // Name: CpuRun()
 //-----------------------------------------------------------------------------
+/** @brief CpuRun @note Public @param None @retval None */
 void MC_Hardware6502::CpuRun()
 {
 	PrintStatus(false, "Cpu Run");
@@ -363,6 +380,7 @@ void MC_Hardware6502::CpuRun()
 //-Public----------------------------------------------------------------------
 // Name: CpuStep()
 //-----------------------------------------------------------------------------
+/** @brief CpuStep @note Public @param None @retval None */
 void MC_Hardware6502::CpuStep()
 {
 	m_Cpu6502Run = false;
@@ -371,6 +389,7 @@ void MC_Hardware6502::CpuStep()
 //-Public----------------------------------------------------------------------
 // Name: CpuSetParameters()
 //-----------------------------------------------------------------------------
+/** @brief CpuSetParameters @note Public @param None @retval None */
 void MC_Hardware6502::CpuSetParameters()
 {
 	PrintStatus(false, "Cpu SetParameters");
@@ -393,6 +412,7 @@ void MC_Hardware6502::CpuSetParameters()
 //-Public----------------------------------------------------------------------
 // Name: CpuSetBreakPointOpCode(bool Enable, uint16_t Address)
 //-----------------------------------------------------------------------------
+/** @brief CpuSetBreakPointOpCode @note Public @param Enable @param Address @retval None */
 void MC_Hardware6502::CpuSetBreakPointOpCode(bool Enable, uint16_t Address)
 {
 	char buf[256];
@@ -408,6 +428,7 @@ void MC_Hardware6502::CpuSetBreakPointOpCode(bool Enable, uint16_t Address)
 //-Public----------------------------------------------------------------------
 // Name: CpuSetBreakPointMemory(bool Enable, uint16_t Address)
 //-----------------------------------------------------------------------------
+/** @brief CpuSetBreakPointMemory @note Public @param Enable @param Address @retval None */
 void MC_Hardware6502::CpuSetBreakPointMemory(bool Enable, uint16_t Address)
 {
 	char buf[256];
@@ -423,6 +444,7 @@ void MC_Hardware6502::CpuSetBreakPointMemory(bool Enable, uint16_t Address)
 //-Protected-------------------------------------------------------------------
 // Name: CpuSetPC(uint16_t PC)
 //-----------------------------------------------------------------------------
+/** @brief CpuSetPC @note Public @param PC @retval None */
 void MC_Hardware6502::CpuSetPC(uint16_t PC)
 {
 	char buf[256];
@@ -434,6 +456,7 @@ void MC_Hardware6502::CpuSetPC(uint16_t PC)
 //-Public----------------------------------------------------------------------
 // Name: CpuCalCyclesPer10thSec()
 //-----------------------------------------------------------------------------
+/** @brief CpuCalCyclesPer10thSec @note Public @param None @retval None */
 void MC_Hardware6502::CpuCalCyclesPer10thSec()
 {
 	long TotalSpeed = (m_CpuSettings.Speed * CPU6502_CLKREFSPEED);
@@ -471,6 +494,7 @@ void MC_Hardware6502::CpuCalCyclesPer10thSec()
 //-Public----------------------------------------------------------------------
 // Name: CpuCegmonukRomMod()
 //-----------------------------------------------------------------------------
+/** @brief CpuCegmonukRomMod @note Public @param None @retval None */
 void MC_Hardware6502::CpuCegmonukRomMod()
 {
 #if(cegmonukRomMod)                                                                 // cegmonuk Res Mod and save Rom
@@ -521,6 +545,7 @@ void MC_Hardware6502::CpuCegmonukRomMod()
 //-Public----------------------------------------------------------------------
 // Name: CpuMemoryMapDump()
 //-----------------------------------------------------------------------------
+/** @brief CpuMemoryMapDump @note Public @param None @retval None */
 void MC_Hardware6502::CpuMemoryMapDump()
 {
 	PrintHexDump16Bit("Memory Dump", &m_MemoryMap, sizeof(m_MemoryMap), 0);
@@ -534,6 +559,7 @@ void MC_Hardware6502::CpuMemoryMapDump()
 //-Public----------------------------------------------------------------------
 // Name: CpuMemoryMapDump(uint16_t StartAddress, uint16_t EndAddress)
 //-----------------------------------------------------------------------------
+/** @brief CpuMemoryMapDump @note Public @param StartAddress @param EndAddress @retval None */
 void MC_Hardware6502::CpuMemoryMapDump(uint16_t StartAddress, uint16_t EndAddress)
 {
 	long MemSize = (EndAddress - StartAddress) + 1;
@@ -548,6 +574,7 @@ void MC_Hardware6502::CpuMemoryMapDump(uint16_t StartAddress, uint16_t EndAddres
 //-Public----------------------------------------------------------------------
 // Name: CpuLoadFile()
 //-----------------------------------------------------------------------------
+/** @brief CpuLoadFile @note Public @param None @retval None */
 void  MC_Hardware6502::CpuLoadFile()
 {
 	LoadUartData(FilenameOpenDlg(LOADSAVE_FILE_FILTER, m_App_Hwnd));
@@ -555,6 +582,7 @@ void  MC_Hardware6502::CpuLoadFile()
 //-Public----------------------------------------------------------------------
 // Name: CpuSaveFile()
 //-----------------------------------------------------------------------------
+/** @brief CpuSaveFile @note Public @param None @retval None */
 void   MC_Hardware6502::CpuSaveFile()
 {
 	SaveUartData(FilenameSaveDlg(LOADSAVE_FILE_FILTER, m_App_Hwnd));
@@ -562,6 +590,7 @@ void   MC_Hardware6502::CpuSaveFile()
 //-Public----------------------------------------------------------------------
 // Name: CpuMemoryLoadFile()
 //-----------------------------------------------------------------------------
+/** @brief CpuMemoryLoadFile @note Public @param None @retval None */
 void   MC_Hardware6502::CpuMemoryLoadFile()
 {
 	MemoryLoadIntelFormat(MemoryMapAddress, MemoryMapEndAddress, FilenameOpenDlg(LOADHEX_FILE_FILTER, m_App_Hwnd));
@@ -569,6 +598,7 @@ void   MC_Hardware6502::CpuMemoryLoadFile()
 //-Public----------------------------------------------------------------------
 // Name: CpuPrintMemoryInfo()
 //-----------------------------------------------------------------------------
+/** @brief CpuPrintMemoryInfo @note Public @param None @retval None */
 void   MC_Hardware6502::CpuPrintMemoryInfo()
 {
 	printf("Address $%04X-$%04X Size $%04X Read/Write    Ram                                    \r\n", MemoryRamAddress, MemoryRamEndAddress, MemoryRamSizeAddress);
@@ -591,6 +621,7 @@ void   MC_Hardware6502::CpuPrintMemoryInfo()
 //-Private---------------------------------------------------------------------
 // Name: CpuMemoryInit()
 //-----------------------------------------------------------------------------
+/** @brief CpuMemoryInit @note Private @param None @retval None */
 void MC_Hardware6502::CpuMemoryInit()
 {
 	m_Cpu6502Run = false;
@@ -619,6 +650,7 @@ void MC_Hardware6502::CpuMemoryInit()
 //-Private---------------------------------------------------------------------
 // Name: Cpu6850Uartinit()
 //-----------------------------------------------------------------------------
+/** @brief Cpu6850Uartinit @note Private @param None @retval None */
 void MC_Hardware6502::Cpu6850Uartinit()
 {
 	m_Uart6850.Registers_SR.byte = 0;
@@ -647,6 +679,7 @@ void MC_Hardware6502::Cpu6850Uartinit()
 //-Private---------------------------------------------------------------------
 // Name: CpuEmu6850UartRead(uint16_t address)
 //-----------------------------------------------------------------------------
+/** @brief CpuEmu6850UartRead @note Private @param address @retval uint8_t */
 uint8_t MC_Hardware6502::CpuEmu6850UartRead(uint16_t address)
 {
 	static uint16_t s_RxDelayTick = 0;
@@ -692,6 +725,7 @@ uint8_t MC_Hardware6502::CpuEmu6850UartRead(uint16_t address)
 //-Private---------------------------------------------------------------------
 // Name: CpuEmu6850UartWrite(uint16_t address, uint8_t value)
 //-----------------------------------------------------------------------------
+/** @brief CpuEmu6850UartWrite @note Private @param address @param value @retval None */
 void MC_Hardware6502::CpuEmu6850UartWrite(uint16_t address, uint8_t value)
 {
 	switch (address) {
@@ -718,6 +752,7 @@ void MC_Hardware6502::CpuEmu6850UartWrite(uint16_t address, uint8_t value)
 //-Private---------------------------------------------------------------------
 // Name: CpuLoadIniFileRoms()
 //-----------------------------------------------------------------------------
+/** @brief CpuLoadIniFileRoms @note Private @param None @retval None */
 void MC_Hardware6502::CpuLoadIniFileRoms()
 {
 	std::string StringLine;
@@ -775,6 +810,7 @@ void MC_Hardware6502::CpuLoadIniFileRoms()
 //-Private---------------------------------------------------------------------
 // Name: CpuLoadRoms()
 //-----------------------------------------------------------------------------
+/** @brief CpuLoadRoms @note Private @param None @retval None */
 void MC_Hardware6502::CpuLoadRoms()
 {
 #if CPU6502_TESTMODE
@@ -828,6 +864,7 @@ void MC_Hardware6502::CpuLoadRoms()
 //-Private---------------------------------------------------------------------
 // Name: MemoryLoad(uint16_t MemoryAddress , uint16_t MemorySize, std::string FileName)
 //-----------------------------------------------------------------------------
+/** @brief MemoryLoad @note Private @param MemoryAddress @param MemorySize @param FileName @retval None */
 void MC_Hardware6502::MemoryLoad(uint16_t MemoryAddress, uint16_t MemorySize, std::string FileName)
 {
 	std::streampos size;
@@ -865,6 +902,7 @@ void MC_Hardware6502::MemoryLoad(uint16_t MemoryAddress, uint16_t MemorySize, st
 //-Private---------------------------------------------------------------------
 // Name: MemorySave(uint16_t MemoryAddress , uint16_t MemorySize, std::string FileName)
 //-----------------------------------------------------------------------------
+/** @brief MemorySave @note Private @param MemoryAddress @param MemorySize @param FileName @retval None */
 void MC_Hardware6502::MemorySave(uint16_t MemoryAddress, uint16_t MemorySize, std::string FileName)
 {
 	std::streampos size;
@@ -893,6 +931,7 @@ void MC_Hardware6502::MemorySave(uint16_t MemoryAddress, uint16_t MemorySize, st
 //-Private---------------------------------------------------------------------
 // Name: MemoryLoadIntelFormat(uint16_t MemoryAddress, uint16_t MemorySize, std::string FileName)
 //-----------------------------------------------------------------------------
+/** @brief MemoryLoadIntelFormat @note Private @param MemoryAddress @param MemorySize @param FileName @retval None */
 void MC_Hardware6502::MemoryLoadIntelFormat(uint16_t MemoryAddress, uint16_t MemorySize, std::string FileName)
 {
 	uint16_t l;
@@ -984,6 +1023,7 @@ void MC_Hardware6502::MemoryLoadIntelFormat(uint16_t MemoryAddress, uint16_t Mem
 //-Private---------------------------------------------------------------------
 // Name: FilenameOpenDlg(const char* filter , HWND hwnd)
 //-----------------------------------------------------------------------------
+/** @brief FilenameOpenDlg @note Private @param filter @param hwnd @retval string */
 std::string MC_Hardware6502::FilenameOpenDlg(const char* filter, HWND hwnd)
 {
 	OPENFILENAMEA OpenFileDialog;
@@ -1009,6 +1049,7 @@ std::string MC_Hardware6502::FilenameOpenDlg(const char* filter, HWND hwnd)
 //-Private---------------------------------------------------------------------
 // Name: FilenameSaveDlg(const char* filter, HWND hwnd)
 //-----------------------------------------------------------------------------
+/** @brief FilenameSaveDlg @note Private @param filter @param hwnd @retval string */
 std::string MC_Hardware6502::FilenameSaveDlg(const char* filter, HWND hwnd)
 {
 	OPENFILENAMEA SaveFileDialog;
@@ -1034,6 +1075,7 @@ std::string MC_Hardware6502::FilenameSaveDlg(const char* filter, HWND hwnd)
 //-Private---------------------------------------------------------------------
 // Name: LoadUartData(std::string FileName)
 //-----------------------------------------------------------------------------
+/** @brief LoadUartData @note Private @param FileName @retval None */
 void MC_Hardware6502::LoadUartData(std::string FileName)
 {
 	std::streampos size;
@@ -1068,6 +1110,7 @@ void MC_Hardware6502::LoadUartData(std::string FileName)
 //-Private---------------------------------------------------------------------
 // Name: SaveUartData(std::string FileName)
 //-----------------------------------------------------------------------------
+/** @brief SaveUartData @note Private @param FileName @retval None */
 void MC_Hardware6502::SaveUartData(std::string FileName)
 {
 	std::streampos size;
@@ -1094,6 +1137,7 @@ void MC_Hardware6502::SaveUartData(std::string FileName)
 //-Private---------------------------------------------------------------------
 // Name: Hex2Dec(std::string s)
 //-----------------------------------------------------------------------------
+/** @brief Hex2Dec @note Private @param s @retval uint16_t */
 uint16_t MC_Hardware6502::Hex2Dec(std::string s)
 {
 	uint16_t i = 0;
@@ -1105,6 +1149,7 @@ uint16_t MC_Hardware6502::Hex2Dec(std::string s)
 //-Private---------------------------------------------------------------------
 // Name: PrintHexDump(char *desc,void *addr,long len)
 //-----------------------------------------------------------------------------
+/** @brief PrintHexDump @note Private @param desc @param addr @param len @retval None */
 void MC_Hardware6502::PrintHexDump(const char* desc, void* addr, long len)
 {
 	long i;
@@ -1159,6 +1204,7 @@ void MC_Hardware6502::PrintHexDump(const char* desc, void* addr, long len)
 //-Private---------------------------------------------------------------------
 // Name: PrintHexDump16Bit(const char* desc, void* addr, long len, long offset)
 //-----------------------------------------------------------------------------
+/** @brief PrintHexDump16Bit @note Private @param desc @param addr @param len @param offset @retval None */
 void MC_Hardware6502::PrintHexDump16Bit(const char* desc, void* addr, long len, long offset)
 {
 	long i;
@@ -1213,6 +1259,7 @@ void MC_Hardware6502::PrintHexDump16Bit(const char* desc, void* addr, long len, 
 //-Private---------------------------------------------------------------------
 // Name: IniFileDefault()
 //-----------------------------------------------------------------------------
+/** @brief IniFileDefault @note Private @param None @retval None */
 void MC_Hardware6502::IniFileDefault()
 {
 	std::string LineData;
@@ -1261,6 +1308,7 @@ void MC_Hardware6502::IniFileDefault()
 //-Private---------------------------------------------------------------------
 // Name: IniFileAddress(std::string Header, uint16_t MemAddress, uint16_t MemSize)
 //-----------------------------------------------------------------------------
+/** @brief IniFileHeaderAddress @note Private @param Header  @param MemAddress  @param MemSize @retval string */
 std::string MC_Hardware6502::IniFileHeaderAddress(std::string Header, uint16_t MemAddress, uint16_t MemSize)
 {
 	char Data[256];
@@ -1274,6 +1322,7 @@ std::string MC_Hardware6502::IniFileHeaderAddress(std::string Header, uint16_t M
 //-Private---------------------------------------------------------------------
 // Name: IniFileRead(std::string FileName)
 //-----------------------------------------------------------------------------
+/** @brief IniFileRead @note Private @param FileName @retval bool */
 bool MC_Hardware6502::IniFileRead(std::string FileName)
 {
 	std::string LineData;
@@ -1308,6 +1357,7 @@ bool MC_Hardware6502::IniFileRead(std::string FileName)
 //-Private---------------------------------------------------------------------
 // Name: IniFileWrite(std::string FileName)
 //-----------------------------------------------------------------------------
+/** @brief IniFileWrite @note Private @param FileName @retval bool */
 bool MC_Hardware6502::IniFileWrite(std::string FileName)
 {
 	std::string StringLine;
@@ -1342,6 +1392,7 @@ bool MC_Hardware6502::IniFileWrite(std::string FileName)
 //-Private---------------------------------------------------------------------
 // Name: TestForBreakPointOpCode()
 //-----------------------------------------------------------------------------
+/** @brief TestForBreakPointOpCode @note Private @param None @retval bool */
 bool MC_Hardware6502::TestForBreakPointOpCode()
 {
 	if (m_BreakPointOpCode.SetFlag && m_BreakPointOpCode.Address == mc_Processor6502.GetPC()) {
@@ -1357,6 +1408,7 @@ bool MC_Hardware6502::TestForBreakPointOpCode()
 //-Private---------------------------------------------------------------------
 // Name: TestForBreakPointMemory(uint16_t& address, uint8_t& data, bool ReadWrite)
 //-----------------------------------------------------------------------------
+/** @brief TestForBreakPointMemory @note Private @param address @param data @param ReadWrite @retval None */
 void MC_Hardware6502::TestForBreakPointMemory(uint16_t& address, uint8_t& data, bool ReadWrite)
 {
 	char buf[256];
@@ -1377,6 +1429,7 @@ void MC_Hardware6502::TestForBreakPointMemory(uint16_t& address, uint8_t& data, 
 //-Private---------------------------------------------------------------------
 // Name: Thread_Create()
 //-----------------------------------------------------------------------------
+/** @brief Thread_Create @note Private @param None @retval None */
 void MC_Hardware6502::Thread_Create()
 {
 	mc_ThreadMain.Thread = std::thread(&MC_Hardware6502::Thread_CallBack_Main, this, 0);
@@ -1393,6 +1446,7 @@ void MC_Hardware6502::Thread_Create()
 //-Private---------------------------------------------------------------------
 // Name: Thread_Stop()
 //-----------------------------------------------------------------------------
+/** @brief Thread_Stop @note Private @param None @retval None */
 void MC_Hardware6502::Thread_Stop()
 {
 	int Timeout = 0;
@@ -1411,12 +1465,14 @@ void MC_Hardware6502::Thread_Stop()
 //-Private---------------------------------------------------------------------
 // Name: Thread_CallBack_Main(int MultiThread_ID)
 //-----------------------------------------------------------------------------
+/** @brief Thread_CallBack_Main @note Private @param MultiThread_ID @retval None */
 void MC_Hardware6502::Thread_CallBack_Main(int MultiThread_ID)
 {
 	uint32_t CpuDelayTime = 0;
 
 	mc_ThreadMain.Running = true;
 	while (!mc_ThreadMain.Quit) {
+		//std::this_thread::sleep_for(1.0ns);
 		CpuDelayTime++;
 		if (CpuDelayTime > m_CpuSettings.SpeedUpDn) {
 			CpuDelayTime = 0;
@@ -1471,6 +1527,7 @@ void MC_Hardware6502::Thread_CallBack_Main(int MultiThread_ID)
 //-Private---------------------------------------------------------------------
 // Name: Thread_CallBack_Video(int MultiThread_ID)
 //-----------------------------------------------------------------------------
+/** @brief Thread_CallBack_Video @note Private @param MultiThread_ID @retval None */
 void MC_Hardware6502::Thread_CallBack_Video(int MultiThread_ID)
 {
 #if CPU6502_TESTMODE == false
@@ -1478,7 +1535,8 @@ void MC_Hardware6502::Thread_CallBack_Video(int MultiThread_ID)
 #endif
 	mc_ThreadVideo.Running = true;
 	while (!mc_ThreadVideo.Quit) {
-		Sleep(16);
+		//Sleep(16);
+		std::this_thread::sleep_for(16ms);
 #if CPU6502_TESTMODE == false
 		if (mc_VideoDisplay.m_Update) {
 			mc_VideoDisplay.m_Update = false;
@@ -1509,6 +1567,7 @@ void MC_Hardware6502::Thread_CallBack_Video(int MultiThread_ID)
 //-Private CallBack------------------------------------------------------------
 // Name: CpuMemoryRead_Callback(uint16_t address)
 //-----------------------------------------------------------------------------
+/** @brief MC_Hardware6502 @note CallBack @param None @retval None */
 uint8_t CpuMemoryRead_Callback(uint16_t address)
 {
 	return mc_Hardware6502.CpuMemoryMapRead(address);
@@ -1516,6 +1575,7 @@ uint8_t CpuMemoryRead_Callback(uint16_t address)
 //-Private CallBack------------------------------------------------------------
 // Name: CpuMemoryWrite_Callback(uint16_t address, uint8_t value)
 //-----------------------------------------------------------------------------
+/** @brief MC_Hardware6502 @note CallBack @param None @retval None */
 void CpuMemoryWrite_Callback(uint16_t address, uint8_t value)
 {
 	mc_Hardware6502.CpuMemoryMapWrite(address, value);

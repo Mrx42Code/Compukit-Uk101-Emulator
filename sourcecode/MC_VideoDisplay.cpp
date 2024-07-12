@@ -1,11 +1,11 @@
 //*****************************************************************************
 // MIT License
 //
-// Copyright(c) 2023 Mrx42Code
+// Copyright(c) 2024 Mrx42Code
 // https://github.com/Mrx42Code/Compukit-Uk101-Emulator 
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this softwareand associated documentation files(the "Software"), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
@@ -66,6 +66,7 @@ extern MC_Hardware6502 mc_Hardware6502;
 // Name: MC_VideoDisplay()
 // Desc: MC_VideoDisplay class
 //-----------------------------------------------------------------------------
+/** @brief MC_VideoDisplay @note Public @param None @retval None */
 MC_VideoDisplay::MC_VideoDisplay()
 {
 	Initialize();
@@ -74,13 +75,14 @@ MC_VideoDisplay::MC_VideoDisplay()
 // Name: ~MC_VideoDisplay()
 // Desc: ~MC_VideoDisplay Destruction class
 //-----------------------------------------------------------------------------
+/** @brief ~MC_VideoDisplay @note Public @param None @retval None */
 MC_VideoDisplay::~MC_VideoDisplay()
 {
-
 }
 //-Public----------------------------------------------------------------------
 // Name: Initialize()
 //-----------------------------------------------------------------------------
+/** @brief Initialize @note Public @param None @retval None */
 void MC_VideoDisplay::Initialize()
 {
 	memset(&m_MemoryVideoCompare, 0x00, sizeof(m_MemoryVideoCompare));
@@ -103,6 +105,7 @@ void MC_VideoDisplay::Initialize()
 //-Public----------------------------------------------------------------------
 // Name: Destroy()
 //-----------------------------------------------------------------------------
+/** @brief Destroy @note Public @param None @retval None */
 void MC_VideoDisplay::Destroy()
 {
 	SelectObject(m_ScreenImage.hdc, m_ScreenImage.SelectObj);
@@ -114,6 +117,7 @@ void MC_VideoDisplay::Destroy()
 //-Public----------------------------------------------------------------------
 // Name: Create()
 //-----------------------------------------------------------------------------
+/** @brief Create @note Public @param None @retval None */
 void MC_VideoDisplay::Create()
 {
 	RECT Video_Rect = { 0, 0, VideoDisplaySize_x, VideoDisplaySize_y };
@@ -127,11 +131,11 @@ void MC_VideoDisplay::Create()
 	m_ScreenImage.DisplayRect.right = Video_Rect.right + VideoLeftOffSet;
 	m_ScreenImage.DisplayRect.bottom = Video_Rect.bottom + VideoTopOffSet;
 	m_ScreenImage.SelectObj = SelectObject(m_ScreenImage.hdc, m_ScreenImage.Bitmap);
-	mc_Hardware6502.PrintStatus(false, "VideoDisplay Create");
 }
 //-Public----------------------------------------------------------------------
 // Name: ReSizeDisplay()
 //-----------------------------------------------------------------------------
+/** @brief ReSizeDisplay @note Public @param None @retval None */
 void MC_VideoDisplay::ReSizeDisplay()
 {
 	GetClientRect(m_Display.Hwnd, &m_Display.Rect);
@@ -141,6 +145,7 @@ void MC_VideoDisplay::ReSizeDisplay()
 //-Public----------------------------------------------------------------------
 // Name: Forceupdate()
 //-----------------------------------------------------------------------------
+/** @brief Forceupdate @note Public @param None @retval None */
 void MC_VideoDisplay::Forceupdate()
 {
 	memset(&m_MemoryVideoCompare, 0xAA, sizeof(m_MemoryVideoCompare));
@@ -149,6 +154,7 @@ void MC_VideoDisplay::Forceupdate()
 //-Public----------------------------------------------------------------------
 // Name: CpuEmuVideoDisplay(uint16_t address, uint8_t value)
 //-----------------------------------------------------------------------------
+/** @brief CpuEmuVideoDisplay @note Public @param address @param value @retval None */
 void MC_VideoDisplay::CpuEmuVideoDisplay(uint16_t address, uint8_t value)
 {
 	uint16_t VideoRamAddress = (address - MemoryVideoAddress);
@@ -172,6 +178,7 @@ void MC_VideoDisplay::CpuEmuVideoDisplay(uint16_t address, uint8_t value)
 //-Public----------------------------------------------------------------------
 // Name: CpuEmuRenderDisplay()
 //-----------------------------------------------------------------------------
+/** @brief CpuEmuRenderDisplay @note Public @param None @retval None */
 void MC_VideoDisplay::CpuEmuRenderDisplay()
 {
 	uint32_t VideoRamAddress;
@@ -204,6 +211,7 @@ void MC_VideoDisplay::CpuEmuRenderDisplay()
 //-Public----------------------------------------------------------------------
 // Name:  CpuEmuLoadCharacterSetRom(std::string FileName)
 //-----------------------------------------------------------------------------
+/** @brief CpuEmuLoadCharacterSetRom @note Public @param FileName @retval None */
 void MC_VideoDisplay::CpuEmuLoadCharacterSetRom(std::string FileName)
 {
 	std::streampos size;

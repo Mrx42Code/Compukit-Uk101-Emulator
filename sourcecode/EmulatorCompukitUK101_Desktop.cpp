@@ -1,11 +1,11 @@
 //*****************************************************************************
 // MIT License
 //
-// Copyright(c) 2023 Mrx42Code
+// Copyright(c) 2024 Mrx42Code
 // https://github.com/Mrx42Code/Compukit-Uk101-Emulator 
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this softwareand associated documentation files(the "Software"), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
@@ -45,14 +45,14 @@
 //-----------------------------------------------------------------------------
 // Implementation Classes
 //-----------------------------------------------------------------------------
-extern MC_Hardware6502 mc_Hardware6502;
-extern MC_Processor6502 mc_Processor6502;
+extern MC_Hardware6502 mc_Hardware6502;											// Cpu	Hardware
+extern MC_Processor6502 mc_Processor6502;										// Cpu	Processor
 
 //-----------------------------------------------------------------------------
 // Implementation Variables
 //-----------------------------------------------------------------------------
 HINSTANCE m_hInst;                                                              // current instance
-HWND hwndDlg = nullptr;
+HWND hwndDlg = nullptr;															// Debug Control Panel
 WCHAR m_szTitle[MAX_LOADSTRING];                                                // The title bar text
 WCHAR m_szWindowClass[MAX_LOADSTRING];                                          // the main window class name
 bool  m_HasSetting = false;
@@ -60,9 +60,10 @@ bool  m_HasSetting = false;
 //-----------------------------------------------------------------------------
 // Private Callback Handlers
 //-----------------------------------------------------------------------------
-LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
+
+LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);							// Main Window Procedure
+INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);								// About Dialog Procedure
+INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam); // Debug Control Panel
 
 //-----------------------------------------------------------------------------
 // Private Task Handlers
@@ -75,6 +76,7 @@ INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARA
 //-Public----------------------------------------------------------------------
 // Name:  wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmdShow)
 //-----------------------------------------------------------------------------
+/** @brief wWinMain @note Public @param hInstance @param hPrevInstance @param lpCmdLine @param nCmdShow @retval int */
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmdShow)
 {
 	MSG msg;
@@ -86,11 +88,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	LoadStringW(hInstance, IDC_EMULATORCOMPUKITUK101DESKTOP, m_szWindowClass, MAX_LOADSTRING);
 	MyRegisterClass(hInstance);
 	if (!InitInstance(hInstance, nCmdShow)) {
-		mc_Hardware6502.PrintStatus(true, "MainApp Create");
+		mc_Hardware6502.PrintStatus(true, "MainApp Initialize");
 		return FALSE;
 	}
 	else {
-		mc_Hardware6502.PrintStatus(false, "MainApp Create");
+		mc_Hardware6502.PrintStatus(false, "MainApp Initialize");
 	}
 	HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_EMULATORCOMPUKITUK101DESKTOP));
 	mc_Hardware6502.Initialize();
@@ -109,6 +111,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 //-Public----------------------------------------------------------------------
 // Name: MyRegisterClass(HINSTANCE hInstance)
 //-----------------------------------------------------------------------------
+/** @brief MyRegisterClass @note Public @param hInstance @retval ATOM */
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
 	WNDCLASSEXW wcex;
@@ -130,6 +133,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 //-Public----------------------------------------------------------------------
 // Name: InitInstance(HINSTANCE hInstance, int nCmdShow)
 //-----------------------------------------------------------------------------
+/** @brief InitInstance @note Public @param hInstance @param nCmdShow @retval BOOL */
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
 	m_hInst = hInstance;                                                           // Store instance handle in our global variable
@@ -149,6 +153,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //-Public----------------------------------------------------------------------
 // Name:  UpdateMenus(HWND hWnd)
 //-----------------------------------------------------------------------------
+/** @brief UpdateMenus @note Public @param hWnd @retval None */
 void UpdateMenus(HWND hWnd)
 {
 	HMENU hmenu = nullptr;
@@ -238,6 +243,7 @@ void UpdateMenus(HWND hWnd)
 //-Public----------------------------------------------------------------------
 // Name:  DebugControlPanelSetItems(HWND hWnd)
 //-----------------------------------------------------------------------------
+/** @brief DebugControlPanelSetItems @note Public @param hWnd @retval None */
 void DebugControlPanelSetItems(HWND hWnd)
 {
 	Sleep(10);
@@ -300,6 +306,7 @@ void DebugControlPanelSetItems(HWND hWnd)
 //-Public----------------------------------------------------------------------
 // Name:  DebugControlPanelGetItems(HWND hWnd)
 //-----------------------------------------------------------------------------
+/** @brief DebugControlPanelGetItems @note Public @param hWnd @retval None */
 void DebugControlPanelGetItems(HWND hWnd)
 {
 	wchar_t StringValue[256];
@@ -370,6 +377,7 @@ void DebugControlPanelGetItems(HWND hWnd)
 //-Public----------------------------------------------------------------------
 // Name:  SetButtonChecked(HWND hWnd, int Button, int Mode)
 //-----------------------------------------------------------------------------
+/** @brief SetButtonChecked @note Public @param hWnd @param Button @param Mode @retval None */
 void SetButtonChecked(HWND hWnd, int Button, int Mode)
 {
 	if (IsDlgButtonChecked(hWnd, Button) != Mode) {
@@ -379,6 +387,7 @@ void SetButtonChecked(HWND hWnd, int Button, int Mode)
 //-Public----------------------------------------------------------------------
 // Name:  AddConsole()
 //-----------------------------------------------------------------------------
+/** @brief AddConsole @note Public @param None @retval None */
 bool AddConsole()
 {
 	HANDLE hConsole = nullptr;
@@ -408,12 +417,13 @@ bool AddConsole()
 	std::wcout.clear();
 	std::wcerr.clear();
 	std::wcin.clear();
-	mc_Hardware6502.PrintStatus(false, "Console Create");
+	mc_Hardware6502.PrintStatus(false, "Console Initialize");
 	return false;
 }
 //-Public----------------------------------------------------------------------
 // Name:  UpdateConsoleTitle()
 //-----------------------------------------------------------------------------
+/** @brief UpdateConsoleTitle @note Public @param None @retval None */
 void UpdateConsoleTitle()
 {
 	TCHAR szNewTitle[MAX_PATH];
@@ -439,6 +449,7 @@ void UpdateConsoleTitle()
 //-Public----------------------------------------------------------------------
 // Name:  ConvertHexUint16ToWstring(uint16_t Value)
 //-----------------------------------------------------------------------------
+/** @brief ConvertHexUint16ToWstring @note Public @param Value @retval std::wstring */
 std::wstring ConvertHexUint16ToWstring(uint16_t Value)
 {
 	char TmpBuffer[255];
@@ -453,6 +464,7 @@ std::wstring ConvertHexUint16ToWstring(uint16_t Value)
 //-Public----------------------------------------------------------------------
 // Name:  ConvertHexUint8ToWstring(uint8_t Value)
 //-----------------------------------------------------------------------------
+/** @brief ConvertHexUint8ToWstring @note Public @param Value @retval std::wstring */
 std::wstring ConvertHexUint8ToWstring(uint8_t Value)
 {
 	char TmpBuffer[255];
@@ -467,6 +479,7 @@ std::wstring ConvertHexUint8ToWstring(uint8_t Value)
 //-Public----------------------------------------------------------------------
 // Name:  ConvertHexLPWSTRTouint16(LPWSTR Value)
 //-----------------------------------------------------------------------------
+/** @brief ConvertHexLPWSTRTouint16 @note Public @param Value @retval uint16_t */
 uint16_t ConvertHexLPWSTRTouint16(LPWSTR Value)
 {
 	unsigned int UintHexValue = 0;
@@ -484,6 +497,7 @@ uint16_t ConvertHexLPWSTRTouint16(LPWSTR Value)
 //-Public----------------------------------------------------------------------
 // Name:  ConvertHexLPWSTRTouint8(LPWSTR Value)
 //-----------------------------------------------------------------------------
+/** @brief ConvertHexLPWSTRTouint8 @note Public @param Value @retval uint8_t */
 uint8_t ConvertHexLPWSTRTouint8(LPWSTR Value)
 {
 	unsigned int UintHexValue = 0;
@@ -522,6 +536,7 @@ uint8_t ConvertHexLPWSTRTouint8(LPWSTR Value)
 //-Private CallBack------------------------------------------------------------
 // Name: WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 //-----------------------------------------------------------------------------
+/** @brief WndProc @note CallBack @param hWnd @param message @param wParam @param lParam @retval LRESULT */
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	int wmId;
@@ -659,6 +674,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 //-Private CallBack------------------------------------------------------------
 // Name:  About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 //-----------------------------------------------------------------------------
+/** @brief About @note CallBack @param hDlg @param message @param wParam @param lParam @retval INT_PTR */
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	UNREFERENCED_PARAMETER(lParam);
@@ -677,6 +693,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 //-Private CallBack------------------------------------------------------------
 // Name:  DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 //-----------------------------------------------------------------------------
+/** @brief DebugControlPanel @note CallBack @param hDlg @param message @param wParam @param lParam @retval INT_PTR */
 INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	int wmId;
@@ -851,3 +868,4 @@ INT_PTR CALLBACK DebugControlPanel(HWND hDlg, UINT message, WPARAM wParam, LPARA
 //-Private Task----------------------------------------------------------------
 // Name:
 //-----------------------------------------------------------------------------
+
